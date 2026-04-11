@@ -74,17 +74,17 @@ jobs:
         run: echo "${{ fromJson(steps.version.outputs.content).version_desc }}"
     
       # 上传至 Release
-      - name: Upload Release
-        uses: softprops/action-gh-release@v1
-        with:
-          name: "${{ fromJson(steps.version.outputs.content).version }}"
-          body: "# Android TV \n${{ fromJson(steps.version.outputs.content).version_desc }}"
-          prerelease: ${{ fromJson(steps.version.outputs.content).prerelease }}
-          token: ${{ secrets.TOKEN }}
-          files: |
-            simple_live_tv_app/build/app/outputs/flutter-apk/app-x86_64-release.apk
-            simple_live_tv_app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
-            simple_live_tv_app/build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
+      # - name: Upload Release
+      #   uses: softprops/action-gh-release@v1
+      #   with:
+      #     name: "${{ fromJson(steps.version.outputs.content).version }}"
+      #     body: "# Android TV \n${{ fromJson(steps.version.outputs.content).version_desc }}"
+      #     prerelease: ${{ fromJson(steps.version.outputs.content).prerelease }}
+      #     token: ${{ secrets.TOKEN }}
+      #     files: |
+      #       simple_live_tv_app/build/app/outputs/flutter-apk/app-x86_64-release.apk
+      #       simple_live_tv_app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+      #       simple_live_tv_app/build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
         
       # 完成
       - run: echo "🍏 This job's status is ${{ job.status }}."
