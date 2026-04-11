@@ -51,16 +51,23 @@ jobs:
         run: |
           cd simple_live_tv_app
           flutter build apk --release --split-per-abi
-    
+          # 新增：重命名文件
+      - name: Rename APKs
+        run: |
+          cd simple_live_tv_app/build/app/outputs/flutter-apk/
+          cp app-armeabi-v7a-release.apk SimpleLiveTV-v7a.apk
+          cp app-arm64-v8a-release.apk SimpleLiveTV-arm64.apk
+          cp app-x86_64-release.apk SimpleLiveTV-x86_64.apk
+      
       # 上传 APK 至 Artifacts
       - name: Upload APK to Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: android_tv
           path: |
-            simple_live_tv_app/build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
-            simple_live_tv_app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
-            simple_live_tv_app/build/app/outputs/flutter-apk/app-x86_64-release.apk
+            simple_live_tv_app/build/app/outputs/flutter-apk/SimpleLiveTV-v7a.apk
+            simple_live_tv_app/build/app/outputs/flutter-apk/SimpleLiveTV-arm64.apk
+            simple_live_tv_app/build/app/outputs/flutter-apk/SimpleLiveTV-x86_64.apk
     
       # 读取版本信息
       - name: Read version
