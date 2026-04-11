@@ -11,7 +11,7 @@ jobs:
       # 签出代码 
       - uses: actions/checkout@v6
         with:
-          ref: master
+          ref: dev
         
       # APK 签名设置
       - name: Download Android keystore
