@@ -256,12 +256,22 @@ class RemoteSyncWebDAVController extends BaseController {
       settingList.remove(LocalStorageService.kHiveDbVer);
       // 不同步webdav的密码,防止旧密码覆盖新密码
       settingList.remove(LocalStorageService.kWebDAVPassword);
-      var dataSettingListMap = {
-        "data": {
-          LocalStorageService.kHiveDbVer: AppSettingsController.instance.dbVer,
-          Platform.operatingSystem: settingList,
-        },
-      };
+
+      // fetch settings backup->merge cur platform settings
+      var dataSettingListMap = {};
+      Archive? archiveOld = await _doWebDAVFetch();
+      if (archiveOld != null) {
+        for (ArchiveFile file in archiveOld) {
+          if (file.isFile && file.name == _userSettingsJsonName) {
+            var jsonString = utf8.decode(file.content);
+            dataSettingListMap = json.decode(jsonString);
+          }
+        }
+      }
+      // if settings_json is empty, make data:{} true
+      (dataSettingListMap["data"] ??= {})
+        ..[LocalStorageService.kHiveDbVer] = AppSettingsController.instance.dbVer
+        ..[Platform.operatingSystem] = settingList;
       final settingJsonFile = File(join(profile.path, _userSettingsJsonName));
       await settingJsonFile.writeAsString(jsonEncode(dataSettingListMap));
 
@@ -280,31 +290,40 @@ class RemoteSyncWebDAVController extends BaseController {
   // webDAV恢复到本地
   void doWebDAVRecovery() async {
     SmartDialog.showLoading(msg: "正在恢复到本地");
+    Archive? archive = await _doWebDAVFetch();
+    if (archive != null) {
+      for (ArchiveFile file in archive) {
+        await _recovery(file);
+      }
+      // 旧版本备份需要迁移
+      MigrationService.migrateDataByVersion();
+      SmartDialog.dismiss();
+      SmartDialog.showToast('同步完成');
+      DateTime recoverTime = DateTime.now();
+      lastRecoverTime.value = Utils.parseTime(recoverTime);
+      LocalStorageService.instance.setValue(
+          LocalStorageService.kWebDAVLastRecoverTime,
+          recoverTime.millisecondsSinceEpoch);
+    }else{
+      SmartDialog.dismiss();
+      SmartDialog.showToast('同步失败');
+    }
+  }
+  // 拉取webdav已有备份
+  Future<Archive?> _doWebDAVFetch() async{
     List<int> data;
+    Archive? archive;
     try{
       data = await davClient.recovery();
     }catch(e,s){
       Log.e("WebDAV恢复失败：$e", s);
-      SmartDialog.dismiss();
-      SmartDialog.showToast('同步失败');
-      return;
+      return null;
     }
-    final archive = await Isolate.run<Archive>(() {
+    archive = await Isolate.run<Archive>(() {
       final zipDecoder = ZipDecoder();
       return zipDecoder.decodeBytes(data);
     });
-    for (ArchiveFile file in archive) {
-      await _recovery(file);
-    }
-    // 旧版本备份需要迁移
-    MigrationService.migrateDataByVersion();
-    SmartDialog.dismiss();
-    SmartDialog.showToast('同步完成');
-    DateTime recoverTime = DateTime.now();
-    lastRecoverTime.value = Utils.parseTime(recoverTime);
-    LocalStorageService.instance.setValue(
-        LocalStorageService.kWebDAVLastRecoverTime,
-        recoverTime.millisecondsSinceEpoch);
+    return archive;
   }
 
   // todo: 后续迁出实现无感同步
@@ -363,7 +382,7 @@ class RemoteSyncWebDAVController extends BaseController {
         try {
           var platform = Platform.operatingSystem;
           if ((jsonData as Map).containsKey(platform)) {
-            jsonDecode(jsonData[platform]).forEach(
+            jsonData[platform].forEach(
               (key, value) {
                 LocalStorageService.instance.setValue(key, value);
               },
