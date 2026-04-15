@@ -17,7 +17,7 @@ jobs:
           fetch-depth: 0 
 
       - name: Pull Upstream
-        uses: wei/pull@v3.2.0
+        uses: wei/pull@master
         with:
           upstream_package_repository: SlotSun/dart_simple_live # 确认上游仓库名
           upstream_release_branch: dev # 上游的主分支名
