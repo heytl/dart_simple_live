@@ -1,7 +1,9 @@
 name: build_my_app_dev
-# 手动触发
 on:
-  workflow_dispatch:
+  workflow_dispatch: # 保留手动触发
+  push:
+    branches:
+      - dev  # 只要 dev 分支有变动（包括同步过来的代码），就自动打包
 jobs:
   build-tv:
     runs-on: macos-latest
