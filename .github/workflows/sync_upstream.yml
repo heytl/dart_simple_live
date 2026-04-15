@@ -1,0 +1,26 @@
+name: Sync Upstream
+on:
+  schedule:
+    - cron: '0 0 * * *' # 每天北京时间早上 8 点检查更新
+  workflow_dispatch:    # 也可以手动点一下同步
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # 赋予写入权限
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: dev # 目标分支
+          fetch-depth: 0 
+
+      - name: Pull Upstream
+        uses: wei/pull@v3
+        with:
+          upstream_package_repository: SlotSun/dart_simple_live # 确认上游仓库名
+          upstream_release_branch: dev # 上游的主分支名
+          target_lastest_revision: true
+          target_branch: dev # 同步到你的 dev 分支
+          github_token: ${{ secrets.TOKEN }}
