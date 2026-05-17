@@ -23,4 +23,4 @@ jobs:
           upstream_release_branch: dev # 上游的主分支名
           target_lastest_revision: true
           target_branch: dev # 同步到你的 dev 分支
-          github_token: ${{ secrets.TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
