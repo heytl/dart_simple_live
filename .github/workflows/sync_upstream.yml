@@ -2,25 +2,35 @@ name: Sync Upstream
 on:
   schedule:
     - cron: '0 0 * * *' # 每天北京时间早上 8 点检查更新
-  workflow_dispatch:    # 也可以手动点一下同步
+  workflow_dispatch:    # 支持手动点击同步
 
 jobs:
   sync:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # 赋予写入权限
+      contents: write   # 必须赋予写入权限，否则无法 push
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: dev # 目标分支
-          fetch-depth: 0 
+          ref: dev # 你的目标分支
+          fetch-depth: 0 # 获取完整历史记录，防止浅克隆导致合并失败
 
-      - name: Pull Upstream
-        uses: wei/pull@master
-        with:
-          upstream_package_repository: SlotSun/dart_simple_live # 确认上游仓库名
-          upstream_release_branch: dev # 上游的主分支名
-          target_lastest_revision: true
-          target_branch: dev # 同步到你的 dev 分支
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Sync Upstream Code
+        run: |
+          # 1. 配置 Git 机器人信息（用于生成合更新的 commit 记录）
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          
+          # 2. 动态添加上游源（指向原作者仓库）
+          git remote add upstream https://github.com/SlotSun/dart_simple_live.git
+          
+          # 3. 拉取上游的所有最新修改，但先不合并
+          git fetch upstream
+          
+          # 4. 把上游的 dev 分支合并到你当前的 dev 分支中
+          git merge upstream/dev --allow-unrelated-histories -m "chore: sync upstream dev"
+          
+          # 5. 推送回你自己的 GitHub 远程 dev 分支
+          git push origin dev
