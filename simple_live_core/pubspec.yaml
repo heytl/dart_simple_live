@@ -10,7 +10,7 @@ dependencies:
   flutter:
     sdk: flutter
   dio: ^5.5.0+1
-  logger: ^2.4.0
+  logger: ^2.6.2
   web_socket_channel: ^3.0.3
   html_unescape: ^2.0.0
   protobuf: ^6.0.0
@@ -19,16 +19,9 @@ dependencies:
   tars_dart:
     path: ./packages/tars_dart
   fixnum: ^1.1.1
-  flutter_qjs:
-    git:
-      url: https://github.com/wgh136/flutter_qjs.git
-      branch: master
   dart_sm: ^0.1.5
 
 dev_dependencies: 
   lints: ^6.0.0
   test: ^1.29.0
 
-flutter:
-  assets:
-    - assets/js/douyin-webmssdk.js

@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:simple_live_app/app/app_style.dart';
+import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/modules/mine/account/account_controller.dart';
 import 'package:simple_live_app/services/bilibili_account_service.dart';
-import 'package:simple_live_app/services/douyin_account_service.dart';
+import 'package:simple_live_app/services/platform_service.dart';
 
 class AccountPage extends GetView<AccountController> {
   const AccountPage({super.key});
@@ -49,16 +50,30 @@ class AccountPage extends GetView<AccountController> {
             enabled: false,
             trailing: const Icon(Icons.chevron_right),
           ),
-          ListTile(
-            leading: Image.asset(
-              'assets/images/huya.png',
-              width: 36,
-              height: 36,
+          Obx(
+            () => ListTile(
+              leading: Image.asset(
+                'assets/images/huya.png',
+                width: 36,
+                height: 36,
+              ),
+              title: const Text("虎牙直播"),
+              subtitle: Text(
+                PlatformService.instance.huyaSdkUa.value.isEmpty
+                    ? "点击拉取最新配置"
+                    : "已自定义 HYSDK_UA",
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () async {
+                var result = await Utils.showAlertDialog(
+                  "是否从网络拉取虎牙最新配置？",
+                  title: "拉取虎牙配置",
+                );
+                if (result) {
+                  await PlatformService.instance.fetchHuyaSdkUa();
+                }
+              },
             ),
-            title: const Text("虎牙直播"),
-            subtitle: const Text("无需登录"),
-            enabled: false,
-            trailing: const Icon(Icons.chevron_right),
           ),
           Obx(
             () => ListTile(
@@ -68,8 +83,8 @@ class AccountPage extends GetView<AccountController> {
                 height: 36,
               ),
               title: const Text("抖音直播"),
-              subtitle: Text(DouyinAccountService.instance.name.value),
-              trailing: DouyinAccountService.instance.logined.value
+              subtitle: Text(PlatformService.instance.douyinName.value),
+              trailing: PlatformService.instance.douyinLogined.value
                   ? const Icon(Icons.logout)
                   : const Icon(Icons.chevron_right),
               onTap: controller.douyinTap,

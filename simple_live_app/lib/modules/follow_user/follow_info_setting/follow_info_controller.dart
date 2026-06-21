@@ -8,8 +8,8 @@ import 'package:simple_live_app/app/utils/url_parse.dart';
 import 'package:simple_live_app/models/db/follow_user.dart' show FollowUser;
 import 'package:simple_live_app/models/db/follow_user_tag.dart';
 import 'package:simple_live_app/models/db/history.dart';
-import 'package:simple_live_app/services/db_service.dart';
 import 'package:simple_live_app/services/follow_service.dart';
+import 'package:simple_live_app/services/history_service.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 
 class FollowInfoController extends BasePageController<FollowUser> {
@@ -79,11 +79,11 @@ class FollowInfoController extends BasePageController<FollowUser> {
     followUser.refresh();
   }
 
-  void updateRemark(String newRemark) {
+  Future<void> updateRemark(String newRemark) async {
     final current = followUser.value;
     if (current == null) return;
     current.remark = newRemark;
-    FollowService.instance.addFollow(current);
+    await FollowService.instance.addFollow(current);
     followUser.refresh();
   }
 
@@ -195,24 +195,24 @@ class FollowInfoController extends BasePageController<FollowUser> {
 
     // 替换关注
     await FollowService.instance.removeFollowUser(current.id);
-    FollowService.instance.addFollow(newFollow);
+    await FollowService.instance.addFollow(newFollow);
 
     // 更新关注同时 更新历史记录数据
-    History? oldHistroy = DBService.instance.getHistory(current.id);
-    // null不迁移
-    if (oldHistroy != null) {
-      final History newHistory = History(
-        id: '${targetSite.id}_$targetRoomId',
-        roomId: targetRoomId,
-        siteId: targetSite.id,
-        userName: detail.userName,
-        face: detail.userAvatar,
-        watchDuration: oldHistroy.watchDuration,
-        updateTime: oldHistroy.updateTime,
-      );
-      await DBService.instance.delHistory(oldHistroy.id);
-      DBService.instance.addOrUpdateHistory(newHistory);
+    History? oldHistory = HistoryService.instance.getHistory(current.id);
+    // null直接生成
+    if (oldHistory != null) {
+      await HistoryService.instance.delHistory(oldHistory.id);
     }
+    final History newHistory = History(
+      id: '${targetSite.id}_$targetRoomId',
+      roomId: targetRoomId,
+      siteId: targetSite.id,
+      userName: detail.userName,
+      face: detail.userAvatar,
+      watchDuration: newFollow.watchDuration,
+      updateTime: DateTime.now(),
+    );
+    await HistoryService.instance.addOrUpdateHistory(newHistory);
 
     // 刷新本地数据并更新UI
     await FollowService.instance.loadData(updateStatus: false);

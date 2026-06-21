@@ -8,7 +8,7 @@ part of 'follow_user_tag.dart';
 
 class FollowUserTagAdapter extends TypeAdapter<FollowUserTag> {
   @override
-  final int typeId = 3;
+  final typeId = 3;
 
   @override
   FollowUserTag read(BinaryReader reader) {

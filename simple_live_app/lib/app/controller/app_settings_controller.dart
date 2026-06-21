@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import 'package:simple_live_app/app/constant.dart';
 import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/sites.dart';
+import 'package:simple_live_app/models/db/follow_snapshot.dart';
 import 'package:simple_live_app/services/local_storage_service.dart';
 
 class AppSettingsController extends GetxController {
@@ -105,8 +106,6 @@ class AppSettingsController extends GetxController {
     pipHideDanmu.value = LocalStorageService.instance
         .getValue(LocalStorageService.kPIPHideDanmu, true);
 
-
-
     bilibiliLoginTip.value = LocalStorageService.instance
         .getValue(LocalStorageService.kBilibiliLoginTip, true);
 
@@ -164,6 +163,9 @@ class AppSettingsController extends GetxController {
     updateFollowThreadCount.value = LocalStorageService.instance
         .getValue(LocalStorageService.kUpdateFollowThreadCount, 4);
 
+    followSnapshotEnable.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kFollowSnapshotEnable, false);
+
     // danmaku-去重参数
     danmuFrequencyControl.value = LocalStorageService.instance
         .getValue(LocalStorageService.kDanmuFrequencyControl, false);
@@ -186,6 +188,15 @@ class AppSettingsController extends GetxController {
 
     followStyleNotGrid.value = LocalStorageService.instance
         .getValue(LocalStorageService.kFollowStyleNotGrid, true);
+
+    hideOfflineFollow.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kHideOfflineFollow, false);
+
+    hideRemoveFollowButton.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kHideRemoveFollow, true);
+
+    followSnapshot = LocalStorageService.instance
+        .getNullValue(LocalStorageService.kFollowSnapshot, null);
 
     initSiteSort();
     initHomeSort();
@@ -236,10 +247,6 @@ class AppSettingsController extends GetxController {
   void setNoFirstRun() {
     LocalStorageService.instance.setValue(LocalStorageService.kFirstRun, false);
   }
-
-
-
-
 
   var hardwareDecode = true.obs;
 
@@ -532,7 +539,8 @@ class AppSettingsController extends GetxController {
 
   void setFirebaseEnable(bool e) {
     firebaseEnable.value = e;
-    LocalStorageService.instance.setValue(LocalStorageService.kFirebaseEnable, e);
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kFirebaseEnable, e);
   }
 
   var customPlayerOutput = false.obs;
@@ -599,6 +607,14 @@ class AppSettingsController extends GetxController {
         .setValue(LocalStorageService.kUpdateFollowThreadCount, e);
   }
 
+  var followSnapshotEnable = false.obs;
+
+  void setFollowSnapshotEnable(bool e) {
+    followSnapshotEnable.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kFollowSnapshotEnable, e);
+  }
+
   var playerForceHttps = false.obs;
 
   void setPlayerForceHttps(bool e) {
@@ -622,11 +638,39 @@ class AppSettingsController extends GetxController {
     LocalStorageService.instance
         .setValue(LocalStorageService.kFollowSortMethod, e.storeValue);
   }
+
   // 关注样式是否卡片化
   var followStyleNotGrid = true.obs;
 
-  void setFollowStyleNotGrid(bool e){
+  void setFollowStyleNotGrid(bool e) {
     followStyleNotGrid.value = e;
-    LocalStorageService.instance.setValue(LocalStorageService.kFollowStyleNotGrid, e);
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kFollowStyleNotGrid, e);
+  }
+
+  // 隐藏不在线的关注
+  var hideOfflineFollow = false.obs;
+
+  void setHideOfflineFollow(bool e) {
+    hideOfflineFollow.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kHideOfflineFollow, e);
+  }
+
+  // 隐藏隐藏快速取关按钮
+  var hideRemoveFollowButton = true.obs;
+
+  void setHideRemoveFollowButton(bool e) {
+    hideRemoveFollowButton.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kHideRemoveFollow, e);
+  }
+
+  /// 保存关注列表快照
+  FollowSnapshot? followSnapshot;
+
+  Future setFollowSnapshot(FollowSnapshot followSnapshot) {
+    return LocalStorageService.instance
+        .setValue(LocalStorageService.kFollowSnapshot, followSnapshot);
   }
 }

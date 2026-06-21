@@ -7,8 +7,9 @@ import 'package:simple_live_core/src/common/http_client.dart';
 import 'package:simple_live_core/src/model/tars/get_cdn_token_ex_req.dart';
 import 'package:simple_live_core/src/model/tars/get_cdn_token_ex_resp.dart';
 import 'package:simple_live_core/src/model/tars/types.dart';
-import 'package:simple_live_core/src/platforms/huya/utils.dart';
+import 'package:simple_live_core/src/platforms/huya/huya_utils.dart';
 import 'package:tars_dart/tars/net/base_tars_http.dart';
+
 
 class HuyaSite implements LiveSite {
   static const String baseUrl = "https://www.huya.com";
@@ -27,8 +28,8 @@ class HuyaSite implements LiveSite {
   /// 匹配 YY ID
   static const String AYYUID_REGEX = r'"yyid":"?(\d+)"?';
 
-  static const String HYSDK_UA =
-      "HYSDK(Windows,30000002)_APP(pc_exe&7070000&official)_SDK(trans&2.33.0.5678)";
+  static String HYSDK_UA =
+      "HYSDK(Windows,30000002)_APP(pc_exe&7090000&official)_SDK(trans&2.35.0.5996)";
 
   static Map<String, String> get requestHeaders {
     return {

@@ -39,12 +39,13 @@
     </screenshot>
   </screenshots>
   <releases>
-    <release version="1.8.7" date="2026-02-06">
+    <release version="1.8.9" date="2026-06-13">
       <description>
-        <p>- 一个非常重要的过渡版本 </p>
-        <p>- 修复huya搜索 @GH4NG </p>
-        <p>- 引入Firebase </p>
-        <p>- 大量数据错误和潜在问题修复 </p>
+        <p>- 项目计划在后续版本中开始使用Rust完全重构的slive-core包，主要原因在于参考项目的Rust化，还有一些其他原因，普通用户无感知 </p>
+        <p>- core移除js引擎依赖更好的适配TV </p>
+        <p>- 新增snapshot功能 </p>
+        <p>- 调整webdav功能</p>
+        <p>- 一些数据错误和潜在问题的修复 </p>
         <p>- 一些细节调整  </p>
         <p>- 关于linux的一系列修复 @pugaizai </p>
         <p>- tips: ios和macos用户请到action更新测试或者下载上游仓库版本</p>

@@ -100,7 +100,10 @@ class FollowUserController extends BasePageController<FollowUser> {
     }
   }
 
+  // 数据清洗：不关心中间 data_flow，最终由filterData决定显示数据
   void filterData() {
+    bool hideOffline = AppSettingsController.instance.hideOfflineFollow.value;
+
     if (filterMode.value.tag == "全部") {
       list.assignAll(FollowService.instance.followList.value);
     } else if (filterMode.value.tag == "直播中") {
@@ -110,6 +113,10 @@ class FollowUserController extends BasePageController<FollowUser> {
     } else {
       FollowService.instance.filterDataByTag(filterMode.value);
       list.assignAll(FollowService.instance.curTagFollowList);
+    }
+
+    if (hideOffline && filterMode.value.tag != "未开播") {
+      list.retainWhere((user) => user.liveStatus.value == 2);
     }
   }
 
@@ -161,11 +168,11 @@ class FollowUserController extends BasePageController<FollowUser> {
       }
     }
     await FollowService.instance.removeFollowUser(follow.id);
-    refreshData();
+    filterData();
   }
 
-  void updateFollow(FollowUser follow) {
-    FollowService.instance.addFollow(follow);
+  Future<void> updateFollow(FollowUser follow) async {
+    await FollowService.instance.addFollow(follow);
   }
 
   void setFollowTag(FollowUser follow, FollowUserTag targetTag) {
@@ -299,6 +306,7 @@ class FollowUserController extends BasePageController<FollowUser> {
   @override
   void onClose() {
     onUpdatedIndexedStream?.cancel();
+    onUpdatedListStream?.cancel();
     super.onClose();
   }
 }

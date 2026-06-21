@@ -9,7 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+import 'package:hive_ce_flutter/adapters.dart';
 import 'package:logger/logger.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -21,9 +21,7 @@ import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/app/utils/listen_fourth_button.dart';
 import 'package:simple_live_app/firebase_options.dart';
-import 'package:simple_live_app/models/db/follow_user.dart';
-import 'package:simple_live_app/models/db/follow_user_tag.dart';
-import 'package:simple_live_app/models/db/history.dart';
+import 'package:simple_live_app/hive_registrar.g.dart';
 import 'package:simple_live_app/modules/other/debug_log_page.dart';
 import 'package:simple_live_app/modules/settings/appstyle_settings/appstyle_setting_contorller.dart';
 import 'package:simple_live_app/routes/app_analytics_observer.dart';
@@ -31,7 +29,7 @@ import 'package:simple_live_app/routes/app_pages.dart';
 import 'package:simple_live_app/routes/route_path.dart';
 import 'package:simple_live_app/services/bilibili_account_service.dart';
 import 'package:simple_live_app/services/db_service.dart';
-import 'package:simple_live_app/services/douyin_account_service.dart';
+import 'package:simple_live_app/services/platform_service.dart';
 import 'package:simple_live_app/services/firebase_service.dart';
 import 'package:simple_live_app/services/follow_service.dart';
 import 'package:simple_live_app/services/history_service.dart';
@@ -43,6 +41,7 @@ import 'package:simple_live_app/src/rust/frb_generated.dart';
 import 'package:simple_live_app/widgets/status/app_loadding_widget.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 import 'package:window_manager/window_manager.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // init-queue:
@@ -81,9 +80,7 @@ Future initWindow() async {
 }
 
 Future initServices() async {
-  Hive.registerAdapter(FollowUserAdapter());
-  Hive.registerAdapter(HistoryAdapter());
-  Hive.registerAdapter(FollowUserTagAdapter());
+  Hive.registerAdapters();
 
   //包信息
   Utils.packageInfo = await PackageInfo.fromPlatform();
@@ -98,7 +95,7 @@ Future initServices() async {
 
   Get.put(BiliBiliAccountService());
 
-  Get.put(DouyinAccountService());
+  Get.put(PlatformService());
 
   Get.put(SyncService());
 
@@ -107,12 +104,12 @@ Future initServices() async {
   Get.put(HistoryService());
 
   // 移动平台不使用 windowManager
-  if(!Platform.isAndroid && !Platform.isIOS){
+  if (!Platform.isAndroid && !Platform.isIOS) {
     Get.put(WindowService());
   }
 
   // only android use firebase
-  if(Platform.isAndroid){
+  if (Platform.isAndroid) {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
@@ -153,7 +150,8 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     bool isDynamicColor = AppStyleSettingController.instance.isDynamic.value;
-    Color styleColor = Color(AppStyleSettingController.instance.styleColor.value);
+    Color styleColor =
+        Color(AppStyleSettingController.instance.styleColor.value);
     return DynamicColorBuilder(
         builder: ((ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
       ColorScheme? lightColorScheme;
@@ -191,7 +189,8 @@ class MyApp extends StatelessWidget {
           ],
           supportedLocales: const [Locale("zh", "CN")],
           logWriterCallback: (text, {bool? isError}) {
-            Log.addDebugLog(text, (isError ?? false) ? Colors.red : Colors.grey);
+            Log.addDebugLog(
+                text, (isError ?? false) ? Colors.red : Colors.grey);
             Log.writeLog(text, (isError ?? false) ? Level.error : Level.info);
           },
           //debugShowCheckedModeBanner: false,
@@ -239,7 +238,8 @@ class MyApp extends StatelessWidget {
                           if (!Platform.isAndroid && !Platform.isIOS) {
                             if (await windowManager.isFullScreen()) {
                               await windowManager.setFullScreen(false);
-                              EventBus.instance.emit(EventBus.kEscapePressed, 0);
+                              EventBus.instance
+                                  .emit(EventBus.kEscapePressed, 0);
                               return;
                             }
                           }

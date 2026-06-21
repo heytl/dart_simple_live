@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:remixicon/remixicon.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/app/utils.dart';
@@ -11,7 +12,8 @@ class LiveRoomCard extends StatelessWidget {
   final Site site;
   final LiveRoomItem item;
   final Function()? onLongPress;
-  const LiveRoomCard(this.site, this.item, {super.key, this.onLongPress});
+  final Function()? onFollowRemove;
+  const LiveRoomCard(this.site, this.item, {super.key, this.onLongPress, this.onFollowRemove});
 
   @override
   Widget build(BuildContext context) {
@@ -78,21 +80,50 @@ class LiveRoomCard extends StatelessWidget {
               ),
             ],
           ),
+          // like ListTitle, but listTile is oversized
           Padding(
-            padding: AppStyle.edgeInsetsA8.copyWith(bottom: 4),
-            child: Text(
-              item.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+            padding: AppStyle.edgeInsetsH8.copyWith(
+              top: 8,
+              bottom: 8,
             ),
-          ),
-          Padding(
-            padding: AppStyle.edgeInsetsH8.copyWith(bottom: 8),
-            child: Text(
-              item.userName,
-              maxLines: 1,
-              style: const TextStyle(
-                  height: 1.4, fontSize: 12, color: Colors.grey),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        item.userName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          height: 1.4,
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (onFollowRemove != null) ...[
+                  const SizedBox(width: 4),
+                  IconButton(
+                    onPressed: onFollowRemove,
+                    visualDensity: VisualDensity.compact,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    icon: const Icon(Remix.dislike_line),
+                  )
+                ]
+              ],
             ),
           )
         ],

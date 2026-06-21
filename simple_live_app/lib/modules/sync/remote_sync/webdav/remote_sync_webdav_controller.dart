@@ -1,29 +1,11 @@
-import 'dart:convert';
-import 'dart:io';
-import 'dart:isolate';
-import 'dart:typed_data';
-
-import 'package:archive/archive.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
-import 'package:path/path.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:simple_live_app/app/constant.dart';
-import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/app/controller/base_controller.dart';
-import 'package:simple_live_app/app/event_bus.dart';
 import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/utils.dart';
-import 'package:simple_live_app/app/utils/archive.dart';
-import 'package:simple_live_app/app/utils/document.dart';
-import 'package:simple_live_app/models/db/follow_user.dart';
-import 'package:simple_live_app/models/db/follow_user_tag.dart';
-import 'package:simple_live_app/models/db/history.dart';
+import 'package:simple_live_app/modules/sync/remote_sync/webdav/common/sync_mode.dart';
+import 'package:simple_live_app/modules/sync/remote_sync/webdav/executor/sync_executor.dart';
 import 'package:simple_live_app/requests/webdav_client.dart';
-import 'package:simple_live_app/services/bilibili_account_service.dart';
-import 'package:simple_live_app/services/db_service.dart';
-import 'package:simple_live_app/services/douyin_account_service.dart';
-import 'package:simple_live_app/services/follow_service.dart';
 import 'package:simple_live_app/services/local_storage_service.dart';
 import 'package:simple_live_app/services/migration_service.dart';
 
@@ -46,13 +28,6 @@ class RemoteSyncWebDAVController extends BaseController {
   var password = "";
   var webDavBackupDirectory = "/simple_live_app".obs;
 
-  final _userFollowJsonName = 'SimpleLive_follows.json';
-  final _userHistoriesJsonName = 'SimpleLive_histories.json';
-  final _userBlockedWordJsonName = 'SimpleLive_blocked_word.json';
-  final _userAccountJsonName = 'SimpleLive_bilibili_account.json';
-  final _userTagsJsonName = 'SimpleLive_Tags.json';
-  final _userSettingsJsonName = 'SimpleLive_Settings.json';
-
   @override
   void onInit() {
     doWebDAVInit();
@@ -64,7 +39,7 @@ class RemoteSyncWebDAVController extends BaseController {
       return;
     }
     // 防呆
-    final filePathCheck = RegExp(r'^/[^/]+$');
+    final filePathCheck = RegExp(r'^/([^/]+)(/[^/]+)*$');
     if (!filePathCheck.hasMatch(newDirectory)) {
       SmartDialog.showToast("请输入正确的文件路径");
       return;
@@ -105,12 +80,12 @@ class RemoteSyncWebDAVController extends BaseController {
         password,
         webDAVDirectory: webDavBackupDirectory.value,
       );
-      // 从未同步过默认为最新数据
+      // 从未同步过默认为最古早数据
       lastRecoverTime.value = Utils.parseTime(
         DateTime.fromMillisecondsSinceEpoch(
           LocalStorageService.instance.getValue(
             LocalStorageService.kWebDAVLastRecoverTime,
-            DateTime.now().millisecondsSinceEpoch,
+            DateTime(2026, 1, 1).millisecondsSinceEpoch,
           ),
         ),
       );
@@ -178,234 +153,67 @@ class RemoteSyncWebDAVController extends BaseController {
   // webDAV上传到云端
   Future<void> doWebDAVUpload() async {
     SmartDialog.showLoading(msg: "正在上传到云端");
-    _backupData().then((value) async {
-      SmartDialog.dismiss();
-      if (value.isNotEmpty) {
-        var result = await davClient.backup(Uint8List.fromList(value));
-        if (result) {
-          SmartDialog.showToast("上传成功");
-          DateTime uploadTime = DateTime.now();
-          lastUploadTime.value = Utils.parseTime(uploadTime);
-          LocalStorageService.instance.setValue(
-              LocalStorageService.kWebDAVLastUploadTime,
-              uploadTime.millisecondsSinceEpoch);
-        } else {
-          Log.e("备份失败", StackTrace.current);
-          SmartDialog.showToast("上传失败");
-        }
-      } else {
-        SmartDialog.showToast("上传失败");
-      }
-    });
-  }
-
-  // 备份所有数据
-  Future<List<int>> _backupData() async {
-    final archive = Archive();
-    List<int> zipBytes = [];
-    // 获取本地备份路径
-    var dir = (await getApplicationSupportDirectory()).path;
-    var profile = Directory(join(dir, 'backup'));
-    if (!profile.existsSync()) {
-      profile.createSync();
-    }
     try {
-      // archive.add(filepath, data_map) 会导致文件损坏
-      // follows
-      var userFollowList = DBService.instance.getFollowList();
-      var dataFollowsMap = {
-        'data': userFollowList.map((e) => e.toJson()).toList()
-      };
-      final userFollowJsonFile = File(join(profile.path, _userFollowJsonName));
-      await userFollowJsonFile.writeAsString(jsonEncode(dataFollowsMap));
-      // 用户自定义标签
-      var userTagsList = DBService.instance.getFollowTagList();
-      var dataTagsMap = {'data': userTagsList.map((e) => e.toJson()).toList()};
-      var userTagsJsonFile = File(join(profile.path, _userTagsJsonName));
-      await userTagsJsonFile.writeAsString(jsonEncode(dataTagsMap));
-      // histories
-      var userHistoriesList = DBService.instance.getHistories();
-      var dataHistoriesMap = {
-        'data': userHistoriesList.map((e) => e.toJson()).toList()
-      };
-      final userHistoriesJsonFile =
-          File(join(profile.path, _userHistoriesJsonName));
-      await userHistoriesJsonFile.writeAsString(jsonEncode(dataHistoriesMap));
-
-      // blocked_word
-      var userShieldList = AppSettingsController.instance.shieldList;
-      var dataShieldListMap = {'data': userShieldList.toList()};
-      final userBlockedWordJsonFile =
-          File(join(profile.path, _userBlockedWordJsonName));
-      await userBlockedWordJsonFile
-          .writeAsString(jsonEncode(dataShieldListMap));
-
-      // bilibili_account
-      var userAccountCookieMap = {
-        'data': {
-          'cookie': BiliBiliAccountService.instance.cookie,
-          'douyin_cookie': DouyinAccountService.instance.cookie
-        }
-      };
-      final accountJsonFile = File(join(profile.path, _userAccountJsonName));
-      await accountJsonFile.writeAsString(jsonEncode(userAccountCookieMap));
-      await userTagsJsonFile.writeAsString(jsonEncode(dataTagsMap));
-      // 全量备份用户设置，为修改包名无痛迁移数据做准备
-      // v1.8.3 修改为按平台备份/恢复用户设置
-      var settingList = LocalStorageService.instance.settingsBox.toMap();
-      settingList.remove(LocalStorageService.kHiveDbVer);
-      var dataSettingListMap = {
-        "data": {
-          LocalStorageService.kHiveDbVer: AppSettingsController.instance.dbVer,
-          Platform.operatingSystem: settingList,
-        },
-      };
-      final settingJsonFile = File(join(profile.path, _userSettingsJsonName));
-      await settingJsonFile.writeAsString(jsonEncode(dataSettingListMap));
-
-      // 遍历profile路径下的所有文件压缩
-      archive.addDirectoryToArchive(profile.path, profile.path);
-      final zipEncoder = ZipEncoder();
-      zipBytes = zipEncoder.encode(archive);
-      profile.clearSync();
-    } catch (e) {
-      Log.logPrint(e);
-      SmartDialog.showToast("备份失败：$e");
+      await _sync(mode: SyncMode.uploadAll);
+      SmartDialog.dismiss();
+      SmartDialog.showToast("上传成功");
+      DateTime uploadTime = DateTime.now();
+      lastUploadTime.value = Utils.parseTime(uploadTime);
+      LocalStorageService.instance.setValue(
+          LocalStorageService.kWebDAVLastUploadTime,
+          uploadTime.millisecondsSinceEpoch);
+    } catch (e, s) {
+      Log.e("备份失败：$e", s);
+      SmartDialog.dismiss();
+      SmartDialog.showToast("上传失败");
     }
-    return zipBytes;
   }
+
 
   // webDAV恢复到本地
   void doWebDAVRecovery() async {
     SmartDialog.showLoading(msg: "正在恢复到本地");
-    List<int> data;
-    try{
-      data = await davClient.recovery();
+    try {
+      await _sync(mode: SyncMode.recoveryAll);
+      SmartDialog.dismiss();
+      SmartDialog.showToast('同步完成');
+      DateTime syncTime = DateTime.now();
+      lastRecoverTime.value = Utils.parseTime(syncTime);
+      LocalStorageService.instance.setValue(
+          LocalStorageService.kWebDAVLastRecoverTime,
+          syncTime.millisecondsSinceEpoch);
     }catch(e,s){
-      Log.e("WebDAV恢复失败：$e", s);
+      Log.e("恢复数据：$e", s);
       SmartDialog.dismiss();
       SmartDialog.showToast('同步失败');
-      return;
     }
-    final archive = await Isolate.run<Archive>(() {
-      final zipDecoder = ZipDecoder();
-      return zipDecoder.decodeBytes(data);
-    });
-    for (ArchiveFile file in archive) {
-      await _recovery(file);
-    }
-    // 旧版本备份需要迁移
-    MigrationService.migrateDataByVersion();
-    SmartDialog.dismiss();
-    SmartDialog.showToast('同步完成');
-    DateTime recoverTime = DateTime.now();
-    lastRecoverTime.value = Utils.parseTime(recoverTime);
-    LocalStorageService.instance.setValue(
-        LocalStorageService.kWebDAVLastRecoverTime,
-        recoverTime.millisecondsSinceEpoch);
   }
 
-  // todo: 后续迁出实现无感同步
-  Future<void> _recovery(ArchiveFile file) async {
-    if (file.isFile && file.name.endsWith('.json')) {
-      var jsonString = utf8.decode(file.content);
-      var jsonData = json.decode(jsonString)['data'];
-      // 同步follows
-      if (file.name == _userFollowJsonName && isSyncFollows.value) {
-        // 修改为多端一致
-        try {
-          // 清空本地关注列表
-          await DBService.instance.followBox.clear();
-          for (var item in jsonData) {
-            var user = FollowUser.fromJson(item);
-            await DBService.instance.followBox.put(user.id, user);
-          }
-          Log.i('已同步关注用户列表');
-        } catch (e) {
-          Log.e('同步关注用户列表失败: $e', StackTrace.current);
-        }
-      } else if (file.name == _userHistoriesJsonName && isSyncHistories.value) {
-        try {
-          for (var item in jsonData) {
-            var history = History.fromJson(item);
-            // 完全同步机制
-            await DBService.instance.addOrUpdateHistory(history);
-          }
-          Log.i('已同步用户观看历史记录');
-        } catch (e) {
-          Log.e('同步用户观看历史记录失败: $e', StackTrace.current);
-        }
-      } else if (file.name == _userBlockedWordJsonName &&
-          isSyncBlockWord.value) {
-        try {
-          for (var keyword in jsonData) {
-            AppSettingsController.instance.addShieldList(keyword.trim());
-          }
-          Log.i('已同步用户屏蔽词');
-        } catch (e) {
-          Log.e('同步用户屏蔽词失败:$e', StackTrace.current);
-        }
-      } else if (file.name == _userAccountJsonName && isSyncAccount.value) {
-        try {
-          var biliCookie = jsonData['cookie'];
-          BiliBiliAccountService.instance.setCookie(biliCookie);
-          BiliBiliAccountService.instance.loadUserInfo();
-          var douyinCookie = jsonData['douyin_cookie'];
-          DouyinAccountService.instance.setCookie(douyinCookie);
-          DouyinAccountService.instance.loadUserInfo();
-          Log.i('已同步用户平台账号');
-        } catch (e) {
-          Log.e('同步用户平台账号失败：$e', StackTrace.current);
-        }
-      } else if (file.name == _userSettingsJsonName && isSyncSetting.value) {
-        try {
-          var platform = Platform.operatingSystem;
-          if ((jsonData as Map).containsKey(platform)) {
-            jsonDecode(jsonData[platform]).forEach(
-              (key, value) {
-                LocalStorageService.instance.setValue(key, value);
-              },
-            );
-          } else {
-            Log.i("缺少$platform对应平台用户设置备份");
-          }
-          // 低于v1.8.5需要升级数据
-          LocalStorageService.instance.setValue(
-            LocalStorageService.kHiveDbVer,
-            (jsonData as Map).containsKey(LocalStorageService.kHiveDbVer)
-                ? jsonData[LocalStorageService.kHiveDbVer]
-                : "10805",
-          );
-          Log.i('已同步用户设置');
-        } catch (e) {
-          Log.e("同步用户设置失败：$e", StackTrace.current);
-        }
-      } else if (file.name == _userTagsJsonName && isSyncFollows.value) {
-        try {
-          // 标签功能和关注具有依赖关系，必须同时同步
-          // 清空本地标签列表
-          await DBService.instance.clearFollowTag();
-          for (var item in jsonData) {
-            var tag = FollowUserTag.fromJson(item);
-            await DBService.instance.tagBox.put(tag.id, tag);
-            // 插入之后验证
-            var insertedTag = DBService.instance.tagBox.get(tag.id);
-            Log.i('Inserted tag: ${insertedTag?.tag}');
-          }
-          // 数据校准
-          await FollowService.instance.followUserAllDataCheck();
-          Log.i('已同步用户自定义标签');
-          // 确保tag同步完成后，更新关注列表
-          EventBus.instance.emit(Constant.kUpdateFollow, 0);
-        } catch (e) {
-          Log.e('同步用户自定义标签失败:$e', StackTrace.current);
-        }
-      } else {
-        return;
-      }
-    } else {
-      Log.i('不是正确的文件名');
+  void doWebDAVBidirectional() async {
+    SmartDialog.showLoading(msg: "正在双向同步数据");
+    try {
+      await _sync(mode: SyncMode.bidirectional);
+      SmartDialog.dismiss();
+      SmartDialog.showToast('同步完成');
+      DateTime syncTime = DateTime.now();
+      lastRecoverTime.value = Utils.parseTime(syncTime);
+      LocalStorageService.instance.setValue(
+          LocalStorageService.kWebDAVLastRecoverTime,
+          syncTime.millisecondsSinceEpoch);
+      LocalStorageService.instance.setValue(
+          LocalStorageService.kWebDAVLastUploadTime,
+          syncTime.millisecondsSinceEpoch);
+    }catch(e,s){
+      Log.e("双向同步数据：$e", s);
+      SmartDialog.dismiss();
+      SmartDialog.showToast('双向同步失败');
     }
+  }
+
+  Future<void> _sync({required SyncMode mode}) async{
+    SyncExecutor.instance.buildExecutorAttr(davClient);
+    await SyncExecutor.instance.sync(mode);
+    MigrationService.migrateDataByVersion();
   }
 
   // ui控制--密码可见控制

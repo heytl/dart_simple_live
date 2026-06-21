@@ -9,3 +9,4 @@ CRUSH.md
 build/
 dev-tool.ps1
 *.py
+simple_live_app/iconfont.yaml

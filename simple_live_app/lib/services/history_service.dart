@@ -73,6 +73,7 @@ class HistoryService extends GetxService {
     Log.i(
         "已观看时间：${_oldWatchedDuration.toHMSString()}_增加时间：${_elapsed.toHMSString()}");
     curLiveRoomHistory?.watchDuration = curTime.toHMSString();
+    curLiveRoomHistory?.syncDuration += _elapsed.inSeconds;
     curLiveRoomHistory?.updateTime = DateTime.now();
     DBService.instance.addOrUpdateHistory(curLiveRoomHistory!);
     EventBus.instance.emit(Constant.kUpdateFollow, curLiveRoomHistory);
@@ -84,5 +85,26 @@ class HistoryService extends GetxService {
     History? history = DBService.instance.getHistory(followUserId);
     historyWatchDuration = history?.watchDuration ?? "00:00:00";
     return historyWatchDuration;
+  }
+
+  // history crud
+  History? getHistory(String id) {
+    return DBService.instance.getHistory(id);
+  }
+
+  Future<void> addOrUpdateHistory(History history) async {
+    await DBService.instance.addOrUpdateHistory(history);
+  }
+
+  Future<void> delHistory(String id) async {
+    await DBService.instance.delHistory(id);
+  }
+
+  List<History> getHistories() {
+    return DBService.instance.getHistories();
+  }
+
+  Future<void> historyClear() async {
+    await DBService.instance.historyBox.clear();
   }
 }

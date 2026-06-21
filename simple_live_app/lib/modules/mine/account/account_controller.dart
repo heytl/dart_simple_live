@@ -5,7 +5,7 @@ import 'package:get/get.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/routes/route_path.dart';
 import 'package:simple_live_app/services/bilibili_account_service.dart';
-import 'package:simple_live_app/services/douyin_account_service.dart';
+import 'package:simple_live_app/services/platform_service.dart';
 
 class AccountController extends GetxController {
   void bilibiliTap() async {
@@ -79,11 +79,11 @@ class AccountController extends GetxController {
 
   // 需要用户手动复制抖音的Cookie
   void douyinTap() async {
-    if (DouyinAccountService.instance.logined.value) {
+    if (PlatformService.instance.douyinLogined.value) {
       var result =
           await Utils.showAlertDialog("确定要清除抖音Cookie吗？", title: "清除Cookie");
       if (result) {
-        DouyinAccountService.instance.logout();
+        PlatformService.instance.douyinLogout();
       }
     } else {
       final cookie = await Utils.showEditTextDialog(
@@ -92,9 +92,9 @@ class AccountController extends GetxController {
         hintText: "__ac_nonce=...;__ac_signature=...;sessionid=...;",
       );
       if (cookie == null || cookie.isEmpty) return;
-      DouyinAccountService.instance.setCookie(cookie);
+      PlatformService.instance.setDouyinCookie(cookie);
       // 检查输入的cookie是否有效
-      await DouyinAccountService.instance.loadUserInfo();
+      await PlatformService.instance.loadDouyinUserInfo();
     }
   }
 }

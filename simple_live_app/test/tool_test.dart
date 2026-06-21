@@ -9,6 +9,22 @@ void testPinyin(){
   });
 }
 
+void testDirectoryCheck(String path) {
+  test("测试文件夹路径检测", () {
+    final regex = RegExp(r'^/([^/]+)(/[^/]+)*$');
+    var res = regex.hasMatch(path);
+    print(res ? "yes" : "no");
+  });
+}
+
 void main(){
-  testPinyin();
+  var p1 = "/123/123";
+  var p2 = "/123/123/123/123";
+  var p3= "123";
+  var p4 = "/123";
+  var p5 = '/123/'; //no
+  var pathList = [p1,p2,p3,p4,p5];
+  for(var path in pathList){
+    testDirectoryCheck(path);
+  }
 }

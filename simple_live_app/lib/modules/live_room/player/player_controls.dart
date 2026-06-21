@@ -37,13 +37,21 @@ Widget playerControls(
   });
 }
 
+Widget buildDragToMoveArea({required Widget child}) {
+  return (!Platform.isAndroid && !Platform.isIOS)
+      ? DragToMoveArea(
+          child: child,
+        )
+      : child;
+}
+
 Widget buildFullControls(
   VideoState videoState,
   LiveRoomController controller,
 ) {
   var padding = MediaQuery.of(videoState.context).padding;
   GlobalKey volumeButtonkey = GlobalKey();
-  return DragToMoveArea(
+  return buildDragToMoveArea(
     child: Stack(
       children: [
         Container(),
@@ -305,6 +313,15 @@ Widget buildFullControls(
                     child: Text(
                       controller.currentLineInfo.value,
                       style: const TextStyle(color: Colors.white, fontSize: 15),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () {
+                      controller.enterFullScreen();
+                    },
+                    icon: const Icon(
+                      Remix.fullscreen_line,
+                      color: Colors.white,
                     ),
                   ),
                   IconButton(

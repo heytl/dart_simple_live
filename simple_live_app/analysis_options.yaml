@@ -10,6 +10,8 @@
 analyzer:
   errors:
     unintended_html_in_doc_comment: ignore
+  exclude:
+    - "**/frb_generated.web.dart"
 include: package:flutter_lints/flutter.yaml
 
 formatter:

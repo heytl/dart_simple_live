@@ -1,0 +1,8 @@
+- todo: 代码重构
+- 修改follow_service 中的外表数据 所有页面自动同步此外表数据
+- 目前是直接修改service数据->db->多controller数据同步 或修改成单controller数据修改->service同步->其他controller数据同步->db
+- 业务操作繁琐，但业务分离数据更安全，更有利于代码审查
+- 完全隔绝controller 直接操作 db，controller->service->db_service
+- 这样可以完全无视db异步操作，降低开发中的心智负担，专注于在外表list或map进行业务操作
+- 数据规模小，可以每次操作都落库，后续业务设计应该重点设计落库数据的合规性检查，即使代码bug导致外表数据错乱不影响db核心数据
+- 前端check+后端落库check+手动数据check+业务调用check+外表隔绝+数据库log

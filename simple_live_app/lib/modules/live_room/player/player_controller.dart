@@ -66,11 +66,14 @@ mixin PlayerMixin {
     //
     // 内存换空间, 同时通过调整参数禁用mpv回放缓存（直播暂时不需要）
     // hls流/令牌流/.. 根据mdk-sdk作者回复, rtsp 在 ffmpeg存在内存泄露, 这意味着我们只能等待修复
-    await pp.setProperty("cache", "no");
-    await pp.setProperty("cache-secs", "0");
-    await pp.setProperty('demuxer-seekable-cache', 'no');
-    await pp.setProperty('demuxer-donate-buffer', 'no');
-    await pp.setProperty("demuxer-max-back-bytes", "0");
+    // temporary fix of android platform
+    if (!Platform.isAndroid) {
+      await pp.setProperty("cache", "no");
+      await pp.setProperty("cache-secs", "0");
+      await pp.setProperty('demuxer-seekable-cache', 'no');
+      await pp.setProperty('demuxer-donate-buffer', 'no');
+      await pp.setProperty("demuxer-max-back-bytes", "0");
+    }
     // 在所有平台上正确启用双重缓存,覆写mpv设置
     if (AppSettingsController.instance.videoDoubleBuffering.value) {
       final directory = await getTemporaryDirectory();
@@ -82,7 +85,7 @@ mixin PlayerMixin {
     }
     // bili/douyin流存在时间戳跳变问题
     // 真机建议-空间换内存-暂时不需要
-    // windows:
+    //  windows:
     //  icc-cache-dir = "~~/cache/icc";
     //  gpu-shader-cache-dir = "~~/cache/shader"
     //  watch-later-dir = "~~/cache/watch_later"
@@ -301,6 +304,7 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
         setLandscapeOrientation();
       }
     } else {
+      // todo: animation isn't smooth...
       bool isMaximized = await windowManager.isMaximized();
       if (isMaximized) {
         await windowManager.setFullScreen(true);

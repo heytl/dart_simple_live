@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:fractional_indexing_dart/fractional_indexing_dart.dart';
 import 'package:get/get.dart';
-import 'package:hive/hive.dart';
+import 'package:hive_ce/hive_ce.dart';
 import 'package:simple_live_app/models/db/follow_user.dart';
 import 'package:simple_live_app/models/db/follow_user_tag.dart';
 import 'package:simple_live_app/models/db/history.dart';
@@ -42,7 +42,8 @@ class DBService extends GetxService {
       return getFollowTag(tag)!;
     }
     String? lastKey = tagBox.keys.lastOrNull;
-    final String uniqueId =  FractionalIndexing.generateKeyBetween(lastKey, null);
+    final String uniqueId =
+        FractionalIndexing.generateKeyBetween(lastKey, null);
     final followUserTag = FollowUserTag(id: uniqueId, tag: tag, userId: []);
     await tagBox.put(uniqueId, followUserTag);
     return followUserTag;
@@ -62,11 +63,31 @@ class DBService extends GetxService {
   }
 
   bool getFollowExist(String id) {
-    return followBox.containsKey(id);
+    var follow = followBox.get(id);
+    return follow != null && !follow.deleted;
   }
 
   List<FollowUser> getFollowList() {
+    return followBox.values.where((f) => !f.deleted).toList();
+  }
+
+  /// 获取所有关注列表（包含墓碑记录），用于同步和清理
+  List<FollowUser> getAllFollowList() {
     return followBox.values.toList();
+  }
+
+  /// 清理墓碑记录：删除 updateTime 超过15天的墓碑
+  Future<int> cleanupTombstones(int beforeTimestamp) async {
+    final keysToDelete = <String>[];
+    for (var entry in followBox.toMap().entries) {
+      if (entry.value.deleted &&
+          entry.value.updateTime > 0 &&
+          entry.value.updateTime < beforeTimestamp) {
+        keysToDelete.add(entry.key as String);
+      }
+    }
+    await followBox.deleteAll(keysToDelete);
+    return keysToDelete.length;
   }
 
   Future addFollow(FollowUser follow) async {

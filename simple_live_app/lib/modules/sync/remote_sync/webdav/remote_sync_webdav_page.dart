@@ -85,6 +85,17 @@ class RemoteSyncWebDAVPage extends GetView<RemoteSyncWebDAVController> {
                           },
                           onLongPress: showSetting,
                         ),
+                        AppStyle.divider,
+                        ListTile(
+                          title: const Text("双向同步数据"),
+                          subtitle: Text("上次同步：${controller.lastRecoverTime}"),
+                          leading: const Icon(Icons.cloud_sync_outlined),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () {
+                            controller.doWebDAVBidirectional();
+                          },
+                          onLongPress: showSetting,
+                        ),
                       ],
               ),
             ),

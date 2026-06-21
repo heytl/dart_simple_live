@@ -8,7 +8,7 @@ import 'package:simple_live_core/simple_live_core.dart';
 import 'package:simple_live_core/src/common/convert_helper.dart';
 import 'package:simple_live_core/src/common/web_socket_util.dart';
 
-import '../common/binary_writer.dart';
+import '../../common/binary_writer.dart';
 
 class BiliBiliDanmakuArgs {
   final int roomId;

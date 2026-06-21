@@ -114,6 +114,8 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   var loadError = false.obs;
   Error? error;
 
+  int _count = 0;
+
   @override
   void onInit() {
     WidgetsBinding.instance.addObserver(this);
@@ -147,6 +149,12 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
       const Duration(milliseconds: 500),
       (timer) {
         _processDanmakuBuffer();
+        // sc同步计时调用 先刷后删
+        _count = (_count + 1) % 2;
+        if (_count == 0) {
+          superChats.refresh();
+          removeSuperChats();
+        }
       },
     );
   }
@@ -588,7 +596,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   /// 移除掉已到期的SC
   void removeSuperChats() async {
     var now = DateTime.now().millisecondsSinceEpoch;
-    superChats.removeWhere((x) => x.endTime.millisecondsSinceEpoch < now);
+    superChats.removeWhere((x) => x.endTime.millisecondsSinceEpoch <= now);
   }
 
   /// 添加历史记录
@@ -609,14 +617,14 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   }
 
   /// 关注用户
-  void followUser() {
+  Future<void> followUser() async {
     if (detail.value == null) {
       return;
     }
     var id = "${site.id}_$roomId";
     var historyDuration =
         HistoryService.instance.getHistoryDuration(followUserId: id);
-    FollowService.instance.addFollow(
+    await FollowService.instance.addFollow(
       FollowUser(
         id: id,
         roomId: roomId,
@@ -625,7 +633,9 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
         face: detail.value?.userAvatar ?? "",
         addTime: DateTime.now(),
         watchDuration: historyDuration,
-      ),
+      )
+        ..liveStatus.value = liveStatus.value ? 2 : 1
+        ..cover.value = detail.value?.cover ?? "",
     );
     followed.value = true;
     EventBus.instance.emit(Constant.kUpdateFollow, id);
@@ -641,7 +651,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     }
 
     var id = "${site.id}_$roomId";
-    FollowService.instance.removeFollowUser(id);
+    await FollowService.instance.removeFollowUser(id);
     followed.value = false;
     EventBus.instance.emit(Constant.kUpdateFollow, id);
   }

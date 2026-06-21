@@ -3,8 +3,8 @@ import 'dart:math';
 
 import 'package:simple_live_core/simple_live_core.dart';
 import 'package:simple_live_core/src/common/http_client.dart';
-import 'package:simple_live_core/src/danmaku/twitch_danmaku.dart';
-import 'package:simple_live_core/src/platforms/twitch/models.dart';
+import 'package:simple_live_core/src/platforms/twitch/twitch_danmaku.dart';
+import 'package:simple_live_core/src/platforms/twitch/twitch_models.dart';
 
 class TwitchSite implements LiveSite {
   @override

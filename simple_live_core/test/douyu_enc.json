@@ -1,0 +1,23 @@
+﻿{
+  "error": 0,
+  "msg": "正常",
+  "data": {
+    "key": "PTcTgd7tjMi1FPi0Peac677995",
+    "rand_str": "gmQeBkpbfH3PczvB",
+    "enc_time": 1,
+    "expire_at": 1773213677,
+    "is_special": 0,
+    "cpp": {
+      "danmu": {
+        "key_ver": "1.0",
+        "key": "MKy68tTD41YmvJZwgVKQ"
+      },
+      "heartbeat": {
+        "key_ver": "1.1",
+        "key": "68rdVozmeLwhgPoaGABH"
+      }
+    },
+    "enc_data": "eyJhbGdfdmVyIjoxLCJrZXlfdmVyIjo5NjcsImtleSI6IlBUY1RnZDd0ak1pMUZQaTBQZWFjNjc3OTk1IiwicmFuZF9zdHIiOiJnbVFlQmtwYmZIM1BjenZCIiwiZW5jX3RpbWUiOjEsImV4cGlyZV9hdCI6MTc3MzIxMzY3Nywic2lnbiI6ImY0MTRmMzA2YmY4ODZmODViZjY2ZDljMGI3OTNlMWY1Iiwib3AiOnsiZGlkIjoiMTAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDE1MDEiLCJpcCI6IjExMy4yNy4yNy4xMDAiLCJ0cyI6MTc3MzIxMzA3NywidWEiOiJNb3ppbGxhLzUuMCAoV2luZG93cyBOVCAxMC4wOyBXaW42NDsgeDY0KSBBcHBsZVdlYktpdC81MzcuMzYgKEtIVE1MLCBsaWtlIEdlY2tvKSBDaHJvbWUvMTE0LjAuMC4wIFNhZmFyaS81MzcuMzYgRWRnLzExNC4wLjE4MjMuNDMifSwiY3BwIjp7ImRhbm11Ijp7ImtleV92ZXIiOiIxLjAiLCJrZXkiOiJNS3k2OHRURDQxWW12Slp3Z1ZLUSJ9LCJoZWFydGJlYXQiOnsia2V5X3ZlciI6IjEuMSIsImtleSI6IjY4cmRWb3ptZUx3aGdQb2FHQUJIIn19fQ=="
+  },
+  "redirect_url": ""
+}

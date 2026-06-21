@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/utils.dart';
@@ -8,10 +6,8 @@ import 'package:simple_live_core/simple_live_core.dart';
 
 class SuperChatCard extends StatefulWidget {
   final LiveSuperChatMessage message;
-  final Function()? onExpire;
   const SuperChatCard(
     this.message, {
-    required this.onExpire,
     super.key,
   });
 
@@ -20,36 +16,22 @@ class SuperChatCard extends StatefulWidget {
 }
 
 class _SuperChatCardState extends State<SuperChatCard> {
-  late Timer timer;
-
-  int countdown = 0;
 
   @override
   void initState() {
-    var currentTime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-    var endTime = widget.message.endTime.millisecondsSinceEpoch ~/ 1000;
-
-    countdown = endTime - currentTime;
-
-    timer = Timer.periodic(const Duration(seconds: 1), timerCallback);
-
     super.initState();
   }
 
-  void timerCallback(Timer e) {
-    if (countdown <= 0) {
-      widget.onExpire?.call();
-      timer.cancel();
-      return;
-    }
-
-    setState(() {
-      countdown -= 1;
-    });
+  int _remainSeconds() {
+    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final end = widget.message.endTime.millisecondsSinceEpoch ~/ 1000;
+    int remain = (end - now).clamp(0, 7200);
+    return remain;
   }
 
   @override
   Widget build(BuildContext context) {
+    final remain = _remainSeconds();
     return ClipRRect(
       borderRadius: AppStyle.radius8,
       child: Container(
@@ -92,7 +74,7 @@ class _SuperChatCardState extends State<SuperChatCard> {
                     ),
                   ),
                   Text(
-                    "$countdown",
+                    "$remain",
                     style: const TextStyle(
                       fontSize: 14,
                       color: Colors.grey,
@@ -120,7 +102,6 @@ class _SuperChatCardState extends State<SuperChatCard> {
 
   @override
   void dispose() {
-    timer.cancel();
     super.dispose();
   }
 }

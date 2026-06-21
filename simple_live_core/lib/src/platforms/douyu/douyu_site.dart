@@ -2,11 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
-import 'package:crypto/crypto.dart';
 import 'package:html_unescape/html_unescape.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 import 'package:simple_live_core/src/common/http_client.dart';
-import 'package:simple_live_core/src/common/js_engine.dart';
+import 'package:simple_live_core/src/platforms/douyu/douyu_utils.dart';
 
 class DouyuSite implements LiveSite {
   @override
@@ -79,13 +78,20 @@ class DouyuSite implements LiveSite {
   @override
   Future<List<LivePlayQuality>> getPlayQualites(
       {required LiveRoomDetail detail}) async {
-    var data = detail.data.toString();
-    data += "&cdn=&rate=-1&ver=Douyu_223061205&iar=1&ive=1&hevc=0&fa=0";
+    var data = await DouyuUtils.sign(detail.roomId);
     List<LivePlayQuality> qualities = [];
     var result = await HttpClient.instance.postJson(
-      "https://www.douyu.com/lapi/live/getH5Play/${detail.roomId}",
+      "https://www.douyu.com/lapi/live/getH5PlayV1/${detail.roomId}",
       data: data,
       formUrlEncoded: true,
+        header: {
+          'accept':
+          'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'accept-encoding': "gzip, deflate",
+          'accept-language': 'zh-CN,zh;q=0.8,en-US;q=0.5,en;q=0.3',
+          'user-agent':
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.43"
+        }
     );
 
     var cdns = <String>[];
@@ -116,12 +122,11 @@ class DouyuSite implements LiveSite {
   Future<LivePlayUrl> getPlayUrls(
       {required LiveRoomDetail detail,
       required LivePlayQuality quality}) async {
-    var args = detail.data.toString();
     var data = quality.data as DouyuPlayData;
 
     List<String> urls = [];
     for (var item in data.cdns) {
-      var url = await getPlayUrl(detail.roomId, args, data.rate, item);
+      var url = await getPlayUrl(detail.roomId, data.rate, item);
       if (url.isNotEmpty) {
         urls.add(url);
       }
@@ -129,19 +134,20 @@ class DouyuSite implements LiveSite {
     return LivePlayUrl(urls: urls);
   }
 
-  Future<String> getPlayUrl(
-      String roomId, String args, int rate, String cdn) async {
-    args += "&cdn=$cdn&rate=$rate";
+  Future<String> getPlayUrl(String roomId, int rate, String cdn) async {
+    var sign = await DouyuUtils.sign(roomId, rate: rate, cdn: cdn);
     var result = await HttpClient.instance.postJson(
-      "https://www.douyu.com/lapi/live/getH5Play/$roomId",
-      data: args,
-      header: {
-        'referer': 'https://www.douyu.com/$roomId',
-        'user-agent':
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.43"
-      },
-      formUrlEncoded: true,
-    );
+        "https://www.douyu.com/lapi/live/getH5PlayV1/$roomId",
+        data: sign,
+        formUrlEncoded: true,
+        header: {
+          'accept':
+              'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'accept-encoding': "gzip, deflate",
+          'accept-language': 'zh-CN,zh;q=0.8,en-US;q=0.5,en;q=0.3',
+          'user-agent':
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.43"
+        });
 
     return "${result["data"]["rtmp_url"]}/${HtmlUnescape().convert(result["data"]["rtmp_live"].toString())}";
   }
@@ -175,16 +181,6 @@ class DouyuSite implements LiveSite {
   Future<LiveRoomDetail> getRoomDetail({required String roomId}) async {
     Map roomInfo = await _getRoomInfo(roomId);
 
-    var jsEncResult = await HttpClient.instance.getText(
-        "https://www.douyu.com/swf_api/homeH5Enc?rids=$roomId",
-        queryParameters: {},
-        header: {
-          'referer': 'https://www.douyu.com/$roomId',
-          'user-agent':
-              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.43"
-        });
-    var crptext = json.decode(jsEncResult)["data"]["room$roomId"].toString();
-
     return LiveRoomDetail(
       cover: roomInfo["room_pic"].toString(),
       online: int.tryParse(roomInfo["room_biz_all"]["hot"].toString()) ?? 0,
@@ -198,7 +194,7 @@ class DouyuSite implements LiveSite {
           roomInfo["videoLoop"] != 1 &&
           !roomInfo["room_name"].startsWith("【回放】"),
       danmakuData: roomInfo["room_id"].toString(),
-      data: await getPlayArgs(crptext, roomInfo["room_id"].toString()),
+      data: "",
       url: "https://www.douyu.com/$roomId",
       isRecord: roomInfo["videoLoop"] == 1,
     );
@@ -315,47 +311,6 @@ class DouyuSite implements LiveSite {
         !roomInfo["room_name"].startsWith("【回放】");
   }
 
-  Future<String> getPlayArgs(String html, String rid) async {
-    //取加密的js
-    html = RegExp(
-                r"(vdwdae325w_64we[\s\S]*function ub98484234[\s\S]*?)function",
-                multiLine: true)
-            .firstMatch(html)
-            ?.group(1) ??
-        "";
-    // 防空
-    if (html == "") {
-      return "";
-    }
-    //去掉eval
-    html = html.replaceAll(RegExp(r"eval.*?;}"), "strc;}");
-
-    try {
-      var did = '10000000000000000000000000001501';
-      JsEngine.init();
-      var jsEvalResult = JsEngine.evaluate("$html;ub98484234();");
-      var res = jsEvalResult.toString();
-      String t10 = (DateTime.now().millisecondsSinceEpoch ~/ 1000).toString();
-      RegExp vReg = RegExp(r'v=(\d+)');
-      Match? vMatch = vReg.firstMatch(res);
-      String? v = vMatch?.group(1);
-      String rb =
-          md5.convert(utf8.encode(rid + did + t10 + (v ?? ""))).toString();
-      String jsSign = res
-          .replaceAll(RegExp(r'return rt;}\);?'), 'return rt;}')
-          .replaceAll('(function (', 'function sign(')
-          .replaceAll('CryptoJS.MD5(cb).toString()', '"$rb"');
-      var params = JsEngine.evaluate("$jsSign;sign($rid,'$did',$t10);");
-      return params.toString();
-    } catch (e) {
-      CoreLog.error(e);
-      return "";
-    } finally {
-      JsEngine.dispose();
-    }
-    // 自部署：https://github.com/SlotSun/simple_live_api
-  }
-
   int parseHotNum(String hn) {
     try {
       var num = double.parse(hn.replaceAll("万", ""));
@@ -379,5 +334,6 @@ class DouyuSite implements LiveSite {
 class DouyuPlayData {
   final int rate;
   final List<String> cdns;
+
   DouyuPlayData(this.rate, this.cdns);
 }

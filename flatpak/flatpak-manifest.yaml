@@ -41,11 +41,11 @@ modules:
       - type: file
         only-arches: [x86_64]
         url: https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init
-        sha256: 20a06e644b0d9bd2fbdbfd52d42540bdde820ea7df86e92e533c073da0cdd43c
+        sha256: 4acc9acc76d5079515b46346a485974457b5a79893cfb01112423c89aeb5aa10
       - type: file
         only-arches: [aarch64]
         url: https://static.rust-lang.org/rustup/dist/aarch64-unknown-linux-gnu/rustup-init
-        sha256: e3853c5a252fca15252d07cb23a1bdd9377a8c6f3efa01531109281ae47f841c
+        sha256: 9732d6c5e2a098d3521fca8145d826ae0aaa067ef2385ead08e6feac88fa5792
 
   - name: Slive
     buildsystem: simple
@@ -77,6 +77,6 @@ modules:
         path: "../"
       - type: git
         url: https://github.com/flutter/flutter.git
-        tag: 3.38.6
-        commit: 8b872868494e429d94fa06dca855c306438b22c0
+        tag: 3.41.9
+        commit: 00b0c91f06209d9e4a41f71b7a512d6eb3b9c694
         dest: flutter

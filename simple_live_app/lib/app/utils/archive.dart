@@ -20,10 +20,10 @@ extension ArchiveExt on Archive {
   }
 
   void add<T>(String name, T raw) {
-    final data = json.encode(raw);
+    final bytes = utf8.encode(json.encode(raw));
     addFile(
-      // 这样会出现问题 不清楚原因
-      ArchiveFile(name, data.length, utf8.encode(data)),
+      // fix: 声明的大小与实际数据大小需匹配
+      ArchiveFile(name, bytes.length, bytes),
     );
   }
 }

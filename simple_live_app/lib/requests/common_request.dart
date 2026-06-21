@@ -40,4 +40,39 @@ class CommonRequest {
     }
     return VersionModel.fromJson(json.decode(result));
   }
+
+  /// 拉取虎牙配置
+  Future<Map<String, dynamic>> fetchHuyaConfig() async {
+    try {
+      return await _fetchHuyaConfigGitMirror();
+    } catch (e) {
+      return await _fetchHuyaConfigJsDelivr();
+    }
+  }
+
+  Future<Map<String, dynamic>> _fetchHuyaConfigGitMirror() async {
+    var result = await HttpClient.instance.getJson(
+      "https://raw.gitmirror.com/slotsun/dart_simple_live/master/assets/huya_config.json",
+      queryParameters: {
+        "ts": DateTime.now().millisecondsSinceEpoch,
+      },
+    );
+    if (result is Map) {
+      return result as Map<String, dynamic>;
+    }
+    return json.decode(result) as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> _fetchHuyaConfigJsDelivr() async {
+    var result = await HttpClient.instance.getJson(
+      "https://cdn.jsdelivr.net/gh/slotsun/dart_simple_live@master/assets/huya_config.json",
+      queryParameters: {
+        "ts": DateTime.now().millisecondsSinceEpoch,
+      },
+    );
+    if (result is Map) {
+      return result as Map<String, dynamic>;
+    }
+    return json.decode(result) as Map<String, dynamic>;
+  }
 }
