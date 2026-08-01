@@ -449,7 +449,7 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
         SmartDialog.showToast("已保存截图至相册");
       } else {
         //选择保存文件夹
-        var path = await FilePicker.saveFile(
+        var path = await FilePicker.platform.saveFile(
           allowedExtensions: ["jpg"],
           type: FileType.image,
           fileName: "${DateTime.now().millisecondsSinceEpoch}.jpg",
