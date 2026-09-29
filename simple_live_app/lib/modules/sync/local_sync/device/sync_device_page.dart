@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:get/get.dart';
 import 'package:remixicon/remixicon.dart';
 import 'package:simple_live_app/app/app_style.dart';
@@ -21,8 +21,7 @@ class SyncDevicePage extends GetView<SyncDeviceController> {
             child: ListTile(
               leading: buildIcon(),
               title: Text(controller.info.name),
-              subtitle: Text(
-                  "${controller.info.type.toUpperCase()}   ${controller.info.address}"),
+              subtitle: Text("${controller.info.type.toUpperCase()}   ${controller.info.address}"),
             ),
           ),
           AppStyle.vGap12,
@@ -62,6 +61,24 @@ class SyncDevicePage extends GetView<SyncDeviceController> {
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
                     controller.syncBiliAccount();
+                  },
+                ),
+                AppStyle.divider,
+                ListTile(
+                  leading: const Icon(Remix.account_circle_line),
+                  title: const Text("同步斗鱼账号"),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    controller.syncDouyuAccount();
+                  },
+                ),
+                AppStyle.divider,
+                ListTile(
+                  leading: const Icon(Remix.tiktok_line),
+                  title: const Text("同步抖音账号"),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    controller.syncDouyinAccount();
                   },
                 ),
               ],

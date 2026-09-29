@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:remixicon/remixicon.dart';
@@ -81,7 +81,7 @@ class MinePage extends StatelessWidget {
             ),
             ListTile(
               leading: const Icon(Remix.account_circle_line),
-              title: const Text("账号管理"),
+              title: const Text("平台配置"),
               trailing: const Icon(
                 Icons.chevron_right,
                 color: Colors.grey,

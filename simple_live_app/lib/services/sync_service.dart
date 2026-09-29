@@ -15,6 +15,7 @@ import 'package:simple_live_app/models/db/follow_user_tag.dart';
 import 'package:simple_live_app/models/db/history.dart';
 import 'package:simple_live_app/services/bilibili_account_service.dart';
 import 'package:simple_live_app/services/db_service.dart';
+import 'package:simple_live_app/services/platform_service.dart';
 import 'package:udp/udp.dart';
 import 'package:shelf/shelf.dart' as shelf;
 import 'package:shelf/shelf_io.dart' as shelf_io;
@@ -73,8 +74,7 @@ class SyncService extends GetxService {
       // 地址直接从datagram中获取，能收到回复说明地址是可以连通的
       var address = datagram.address.address;
       //检查是否已经存在
-      var index =
-          scanClients.indexWhere((element) => element.address == address);
+      var index = scanClients.indexWhere((element) => element.address == address);
       if (index == -1) {
         scanClients.add(
           SyncClinet(
@@ -169,10 +169,7 @@ class SyncService extends GetxService {
         var ipList = <String>[];
         for (var interface in interfaces) {
           for (var addr in interface.addresses) {
-            if (addr.type.name == 'IPv4' &&
-                !addr.address.startsWith('127') &&
-                !addr.isMulticast &&
-                !addr.isLoopback) {
+            if (addr.type.name == 'IPv4' && !addr.address.startsWith('127') && !addr.isMulticast && !addr.isLoopback) {
               ipList.add(addr.address);
               break;
             }
@@ -197,6 +194,8 @@ class SyncService extends GetxService {
       serverRouter.post('/sync/history', _syncHistoryReuqest);
       serverRouter.post('/sync/blocked_word', _syncBlockedWordReuqest);
       serverRouter.post('/sync/account/bilibili', _syncBiliAccountReuqest);
+      serverRouter.post('/sync/account/douyu', _syncDouyuAccountRequest);
+      serverRouter.post('/sync/account/douyin', _syncDouyinAccountRequest);
 
       var server = await shelf_io.serve(
         serverRouter.call,
@@ -224,8 +223,7 @@ class SyncService extends GetxService {
     return toJsonResponse({
       'status': true,
       'message': 'http server is running...',
-      "version":
-          'SimpeLive ${Platform.operatingSystem} v${Utils.packageInfo.version}',
+      "version": 'SimpeLive ${Platform.operatingSystem} v${Utils.packageInfo.version}',
     });
   }
 
@@ -245,8 +243,7 @@ class SyncService extends GetxService {
   /// 同步关注用户列表
   Future<shelf.Response> _syncFollowUserReuqest(shelf.Request request) async {
     try {
-      var overlay =
-          int.parse(request.requestedUri.queryParameters['overlay'] ?? '0');
+      var overlay = int.parse(request.requestedUri.queryParameters['overlay'] ?? '0');
 
       var body = await request.readAsString();
       Log.d('_syncFollowUserReuqest: $body');
@@ -274,11 +271,9 @@ class SyncService extends GetxService {
   }
 
   /// 同步标签列表
-  Future<shelf.Response> _syncFollowUserTagRequest(
-      shelf.Request request) async {
+  Future<shelf.Response> _syncFollowUserTagRequest(shelf.Request request) async {
     try {
-      var overlay =
-          int.parse(request.requestedUri.queryParameters['overlay'] ?? '0');
+      var overlay = int.parse(request.requestedUri.queryParameters['overlay'] ?? '0');
 
       var body = await request.readAsString();
       Log.d('_syncFollowUserTagRequest: $body');
@@ -308,8 +303,7 @@ class SyncService extends GetxService {
   /// 同步观看记录
   Future<shelf.Response> _syncHistoryReuqest(shelf.Request request) async {
     try {
-      var overlay =
-          int.parse(request.requestedUri.queryParameters['overlay'] ?? '0');
+      var overlay = int.parse(request.requestedUri.queryParameters['overlay'] ?? '0');
       var body = await request.readAsString();
       Log.d('_syncFollowUserReuqest: $body');
       var jsonBody = json.decode(body);
@@ -345,8 +339,7 @@ class SyncService extends GetxService {
   /// 同步弹幕屏蔽词
   Future<shelf.Response> _syncBlockedWordReuqest(shelf.Request request) async {
     try {
-      var overlay =
-          int.parse(request.requestedUri.queryParameters['overlay'] ?? '0');
+      var overlay = int.parse(request.requestedUri.queryParameters['overlay'] ?? '0');
       var body = await request.readAsString();
       Log.d('_syncBlockedWordReuqest: $body');
       var jsonBody = json.decode(body);
@@ -379,6 +372,51 @@ class SyncService extends GetxService {
       BiliBiliAccountService.instance.setCookie(cookie);
       BiliBiliAccountService.instance.loadUserInfo();
       SmartDialog.showToast('已同步哔哩哔哩账号');
+      return toJsonResponse({
+        'status': true,
+        'message': 'success',
+      });
+    } catch (e) {
+      return toJsonResponse({
+        'status': false,
+        'message': e.toString(),
+      });
+    }
+  }
+
+  /// 同步斗鱼账号
+  Future<shelf.Response> _syncDouyuAccountRequest(shelf.Request request) async {
+    try {
+      var body = await request.readAsString();
+      Log.d('_syncDouyuAccountRequest: $body');
+      var jsonBody = json.decode(body);
+      // 和 client data 保持一致
+      var cookie = jsonBody['cookie'];
+      var did = jsonBody['dy_did'];
+      var ltp0 = jsonBody['ltp0'];
+      PlatformService.instance.setDouyuCookie(cookie);
+      PlatformService.instance.setDouyuDidAndLtp0(did,ltp0);
+      SmartDialog.showToast('已同步斗鱼账号');
+      return toJsonResponse({
+        'status': true,
+        'message': 'success',
+      });
+    } catch (e) {
+      return toJsonResponse({
+        'status': false,
+        'message': e.toString(),
+      });
+    }
+  }
+  /// 同步抖音账号
+  Future<shelf.Response> _syncDouyinAccountRequest(shelf.Request request) async {
+    try {
+      var body = await request.readAsString();
+      Log.d('_syncDouyinAccountRequest: $body');
+      var jsonBody = json.decode(body);
+      var cookie = jsonBody['cookie'];
+      PlatformService.instance.setDouyinCookie(cookie);
+      SmartDialog.showToast('已同步抖音账号');
       return toJsonResponse({
         'status': true,
         'message': 'success',
