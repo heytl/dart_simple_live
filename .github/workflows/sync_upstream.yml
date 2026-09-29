@@ -36,56 +36,55 @@ jobs:
           git fetch origin master dev
           git fetch upstream master dev
 
-          OLD_MASTER="$(git rev-parse origin/master)"
-          UPSTREAM_MASTER="$(git rev-parse upstream/master)"
-          OLD_DEV="$(git rev-parse origin/dev)"
-          UPSTREAM_DEV="$(git rev-parse upstream/dev)"
+          # GitHub Actions 的 GITHUB_TOKEN 不能更新其他 workflow 文件。
+          # 因此 master/dev 都同步上游最新源码，但保留各自现有的 .github/workflows。
+          # 同步采用“源码快照提交”，不 merge、不 force push，也不引入上游改写后的冲突历史。
 
-          echo "Current master:  $OLD_MASTER"
-          echo "Upstream master: $UPSTREAM_MASTER"
-          echo "Current dev:     $OLD_DEV"
-          echo "Upstream dev:    $UPSTREAM_DEV"
+          sync_branch() {
+            local branch="$1"
+            local upstream_ref="upstream/$branch"
+            local origin_ref="origin/$branch"
+            local work_branch="sync-$branch"
 
-          # 保存我们自己维护的两个 workflow。
-          mkdir -p /tmp/custom-workflows
-          cp .github/workflows/sync_upstream.yml /tmp/custom-workflows/sync_upstream.yml
-          cp .github/workflows/build_my_app_dev.yaml /tmp/custom-workflows/build_my_app_dev.yaml
+            echo "===== Sync $branch ====="
+            echo "Current:  $(git rev-parse "$origin_ref")"
+            echo "Upstream: $(git rev-parse "$upstream_ref")"
 
-          # master = SlotSun/master + 我们自己的两个 workflow。
-          # 正常同步完成后，origin/master 的父提交就是当时的 upstream/master。
-          CURRENT_MASTER_BASE="$(git rev-parse origin/master^ 2>/dev/null || true)"
+            # 先取得上游最新完整源码快照。
+            git checkout -B "$work_branch" "$upstream_ref"
 
-          if [ "$CURRENT_MASTER_BASE" = "$UPSTREAM_MASTER" ]; then
-            echo "master is already based on the latest upstream master."
-            echo "master_updated=false" >> "$GITHUB_OUTPUT"
-          else
-            git checkout -B master upstream/master
+            # workflow 目录必须保持为本仓库当前版本，避免 GitHub App 权限拒绝。
+            rm -rf .github/workflows
+            if git cat-file -e "$origin_ref:.github/workflows" 2>/dev/null; then
+              git checkout "$origin_ref" -- .github/workflows
+            fi
 
-            mkdir -p .github/workflows
-            cp /tmp/custom-workflows/sync_upstream.yml .github/workflows/sync_upstream.yml
-            cp /tmp/custom-workflows/build_my_app_dev.yaml .github/workflows/build_my_app_dev.yaml
+            git add -A
 
-            git add .github/workflows/sync_upstream.yml .github/workflows/build_my_app_dev.yaml
-            git commit -m "chore: preserve custom workflows"
+            # 把父提交切回我们自己的当前分支，保留刚才准备好的源码快照。
+            # 最终只生成一个普通 fast-forward 同步提交。
+            git reset --soft "$origin_ref"
 
-            git push origin HEAD:refs/heads/master               --force-with-lease=refs/heads/master:"$OLD_MASTER"
+            if git diff --cached --quiet; then
+              echo "$branch is already up to date (workflow-only upstream differences are ignored)."
+              echo "${branch}_updated=false" >> "$GITHUB_OUTPUT"
+              return
+            fi
 
-            echo "master_updated=true" >> "$GITHUB_OUTPUT"
-          fi
+            git commit -m "chore: sync upstream $branch"
+            git push origin HEAD:"refs/heads/$branch"
 
-          # dev 完全镜像 SlotSun/dev，不保留任何本地改动。
-          if [ "$OLD_DEV" = "$UPSTREAM_DEV" ]; then
-            echo "dev is already up to date."
-            echo "dev_updated=false" >> "$GITHUB_OUTPUT"
-          else
-            git push origin upstream/dev:refs/heads/dev               --force-with-lease=refs/heads/dev:"$OLD_DEV"
+            echo "${branch}_updated=true" >> "$GITHUB_OUTPUT"
+          }
 
-            echo "dev_updated=true" >> "$GITHUB_OUTPUT"
-          fi
+          sync_branch master
+          sync_branch dev
 
       - name: Trigger APK build
         if: steps.sync.outputs.dev_updated == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh workflow run build_my_app_dev.yaml             --repo "${{ github.repository }}"             --ref master
+          gh workflow run build_my_app_dev.yaml \
+            --repo "${{ github.repository }}" \
+            --ref master
