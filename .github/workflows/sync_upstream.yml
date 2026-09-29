@@ -6,7 +6,7 @@ on:
   workflow_dispatch: # 支持手动点击同步
 
 concurrency:
-  group: sync-upstream-dev
+  group: sync-upstream
   cancel-in-progress: true
 
 jobs:
@@ -17,41 +17,74 @@ jobs:
       actions: write
 
     steps:
-      - name: Checkout dev
+      - name: Checkout master
         uses: actions/checkout@v4
         with:
-          ref: dev
+          ref: master
           fetch-depth: 0
 
-      - name: Sync upstream dev
+      - name: Sync upstream master and dev
         id: sync
         shell: bash
         run: |
           set -euo pipefail
 
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
           git remote add upstream https://github.com/SlotSun/dart_simple_live.git
-          git fetch origin dev
-          git fetch upstream dev
+          git fetch origin master dev
+          git fetch upstream master dev
 
-          OLD_SHA="$(git rev-parse origin/dev)"
-          NEW_SHA="$(git rev-parse upstream/dev)"
+          OLD_MASTER="$(git rev-parse origin/master)"
+          UPSTREAM_MASTER="$(git rev-parse upstream/master)"
+          OLD_DEV="$(git rev-parse origin/dev)"
+          UPSTREAM_DEV="$(git rev-parse upstream/dev)"
 
-          echo "Current dev:  $OLD_SHA"
-          echo "Upstream dev: $NEW_SHA"
+          echo "Current master:  $OLD_MASTER"
+          echo "Upstream master: $UPSTREAM_MASTER"
+          echo "Current dev:     $OLD_DEV"
+          echo "Upstream dev:    $UPSTREAM_DEV"
 
-          if [ "$OLD_SHA" = "$NEW_SHA" ]; then
-            echo "No upstream changes."
-            echo "updated=false" >> "$GITHUB_OUTPUT"
-            exit 0
+          # 保存我们自己维护的两个 workflow。
+          mkdir -p /tmp/custom-workflows
+          cp .github/workflows/sync_upstream.yml /tmp/custom-workflows/sync_upstream.yml
+          cp .github/workflows/build_my_app_dev.yaml /tmp/custom-workflows/build_my_app_dev.yaml
+
+          # master = SlotSun/master + 我们自己的两个 workflow。
+          # 正常同步完成后，origin/master 的父提交就是当时的 upstream/master。
+          CURRENT_MASTER_BASE="$(git rev-parse origin/master^ 2>/dev/null || true)"
+
+          if [ "$CURRENT_MASTER_BASE" = "$UPSTREAM_MASTER" ]; then
+            echo "master is already based on the latest upstream master."
+            echo "master_updated=false" >> "$GITHUB_OUTPUT"
+          else
+            git checkout -B master upstream/master
+
+            mkdir -p .github/workflows
+            cp /tmp/custom-workflows/sync_upstream.yml .github/workflows/sync_upstream.yml
+            cp /tmp/custom-workflows/build_my_app_dev.yaml .github/workflows/build_my_app_dev.yaml
+
+            git add .github/workflows/sync_upstream.yml .github/workflows/build_my_app_dev.yaml
+            git commit -m "chore: preserve custom workflows"
+
+            git push origin HEAD:refs/heads/master               --force-with-lease=refs/heads/master:"$OLD_MASTER"
+
+            echo "master_updated=true" >> "$GITHUB_OUTPUT"
           fi
 
-          # dev 只作为上游镜像，不再 merge，避免上游改写历史或同文件修改导致冲突。
-          git push origin upstream/dev:refs/heads/dev             --force-with-lease=refs/heads/dev:"$OLD_SHA"
+          # dev 完全镜像 SlotSun/dev，不保留任何本地改动。
+          if [ "$OLD_DEV" = "$UPSTREAM_DEV" ]; then
+            echo "dev is already up to date."
+            echo "dev_updated=false" >> "$GITHUB_OUTPUT"
+          else
+            git push origin upstream/dev:refs/heads/dev               --force-with-lease=refs/heads/dev:"$OLD_DEV"
 
-          echo "updated=true" >> "$GITHUB_OUTPUT"
+            echo "dev_updated=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Trigger APK build
-        if: steps.sync.outputs.updated == 'true'
+        if: steps.sync.outputs.dev_updated == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
