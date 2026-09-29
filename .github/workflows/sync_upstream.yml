@@ -1,36 +1,58 @@
 name: Sync Upstream
+
 on:
   schedule:
     - cron: '0 0 * * *' # 每天北京时间早上 8 点检查更新
-  workflow_dispatch:    # 支持手动点击同步
+  workflow_dispatch: # 支持手动点击同步
+
+concurrency:
+  group: sync-upstream-dev
+  cancel-in-progress: true
 
 jobs:
   sync:
     runs-on: ubuntu-latest
     permissions:
-      contents: write   # 必须赋予写入权限，否则无法 push
+      contents: write
+      actions: write
 
     steps:
-      - name: Checkout
+      - name: Checkout dev
         uses: actions/checkout@v4
         with:
-          ref: dev # 你的目标分支
-          fetch-depth: 0 # 获取完整历史记录，防止浅克隆导致合并失败
+          ref: dev
+          fetch-depth: 0
 
-      - name: Sync Upstream Code
+      - name: Sync upstream dev
+        id: sync
+        shell: bash
         run: |
-          # 1. 配置 Git 机器人信息（用于生成合更新的 commit 记录）
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          
-          # 2. 动态添加上游源（指向原作者仓库）
+          set -euo pipefail
+
           git remote add upstream https://github.com/SlotSun/dart_simple_live.git
-          
-          # 3. 拉取上游的所有最新修改，但先不合并
-          git fetch upstream
-          
-          # 4. 把上游的 dev 分支合并到你当前的 dev 分支中
-          git merge upstream/dev --allow-unrelated-histories -m "chore: sync upstream dev"
-          
-          # 5. 推送回你自己的 GitHub 远程 dev 分支
-          git push origin dev
+          git fetch origin dev
+          git fetch upstream dev
+
+          OLD_SHA="$(git rev-parse origin/dev)"
+          NEW_SHA="$(git rev-parse upstream/dev)"
+
+          echo "Current dev:  $OLD_SHA"
+          echo "Upstream dev: $NEW_SHA"
+
+          if [ "$OLD_SHA" = "$NEW_SHA" ]; then
+            echo "No upstream changes."
+            echo "updated=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # dev 只作为上游镜像，不再 merge，避免上游改写历史或同文件修改导致冲突。
+          git push origin upstream/dev:refs/heads/dev             --force-with-lease=refs/heads/dev:"$OLD_SHA"
+
+          echo "updated=true" >> "$GITHUB_OUTPUT"
+
+      - name: Trigger APK build
+        if: steps.sync.outputs.updated == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run build_my_app_dev.yaml             --repo "${{ github.repository }}"             --ref master
