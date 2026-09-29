@@ -13,12 +13,51 @@ jobs:
   build-tv:
     runs-on: macos-latest
     permissions:
-      contents: read
+      contents: write
+
     steps:
-      # 始终打包同步后的 dev 分支
+      # 始终打包同步后的 dev 分支。
       - uses: actions/checkout@v6
         with:
           ref: dev
+          fetch-depth: 0
+
+      # 生成版本、北京时间日期、Release/Tag 名称。
+      - name: Prepare release metadata
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          VERSION="$(python3 -c 'import json; print(json.load(open("assets/tv_app_version.json", encoding="utf-8"))["version"])')"
+          VERSION_DESC="$(python3 -c 'import json; print(json.load(open("assets/tv_app_version.json", encoding="utf-8"))["version_desc"])')"
+          BUILD_DATE="$(TZ=Asia/Shanghai date +%Y%m%d)"
+          DEV_SHA="$(git rev-parse HEAD)"
+          TAG="dev-tv-v${VERSION}-${BUILD_DATE}"
+          TITLE="SimpleLive TV ${VERSION} Dev ${BUILD_DATE}"
+
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "date=${BUILD_DATE}" >> "$GITHUB_OUTPUT"
+          echo "dev_sha=${DEV_SHA}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "title=${TITLE}" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "version_desc<<EOF"
+            echo "${VERSION_DESC}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "${VERSION_DESC}"
+            echo
+            echo "Build date (Asia/Shanghai): ${BUILD_DATE}"
+            echo "Source branch: dev"
+            echo "Source commit: ${DEV_SHA}"
+          } > release-notes.md
+
+          echo "Release: ${TITLE}"
+          echo "Tag: ${TAG}"
 
       # APK 签名设置
       - name: Download Android keystore
@@ -61,36 +100,77 @@ jobs:
           cd simple_live_tv_app
           flutter build apk --release --split-per-abi
 
-      # 重命名 APK
+      # APK 文件名增加北京时间日期。
       - name: Rename APKs
+        shell: bash
         run: |
+          set -euo pipefail
           cd simple_live_tv_app/build/app/outputs/flutter-apk/
-          cp app-armeabi-v7a-release.apk SimpleLiveTV-v7a.apk
-          cp app-arm64-v8a-release.apk SimpleLiveTV-arm64.apk
-          cp app-x86_64-release.apk SimpleLiveTV-x86_64.apk
 
-      # 上传 APK 至 Artifacts
+          BUILD_DATE="${{ steps.meta.outputs.date }}"
+          cp app-armeabi-v7a-release.apk "SimpleLiveTV-v7a-${BUILD_DATE}.apk"
+          cp app-arm64-v8a-release.apk "SimpleLiveTV-arm64-${BUILD_DATE}.apk"
+          cp app-x86_64-release.apk "SimpleLiveTV-x86_64-${BUILD_DATE}.apk"
+
+      # 上传 APK 至 Artifacts。
       - name: Upload APK to Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: android_tv
+          name: android_tv-${{ steps.meta.outputs.date }}
           path: |
-            simple_live_tv_app/build/app/outputs/flutter-apk/SimpleLiveTV-v7a.apk
-            simple_live_tv_app/build/app/outputs/flutter-apk/SimpleLiveTV-arm64.apk
-            simple_live_tv_app/build/app/outputs/flutter-apk/SimpleLiveTV-x86_64.apk
+            simple_live_tv_app/build/app/outputs/flutter-apk/SimpleLiveTV-v7a-${{ steps.meta.outputs.date }}.apk
+            simple_live_tv_app/build/app/outputs/flutter-apk/SimpleLiveTV-arm64-${{ steps.meta.outputs.date }}.apk
+            simple_live_tv_app/build/app/outputs/flutter-apk/SimpleLiveTV-x86_64-${{ steps.meta.outputs.date }}.apk
 
-      # 读取版本信息
-      - name: Read version
-        id: version
-        uses: juliangruber/read-file-action@v1
-        with:
-          path: assets/tv_app_version.json
+      # 创建当天 Release；同一天重复构建时更新同一个 Tag/Release，并覆盖 APK。
+      - name: Publish daily prerelease
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.meta.outputs.tag }}
+          TITLE: ${{ steps.meta.outputs.title }}
+          DEV_SHA: ${{ steps.meta.outputs.dev_sha }}
+          BUILD_DATE: ${{ steps.meta.outputs.date }}
+        run: |
+          set -euo pipefail
 
-      - name: Echo version
-        run: echo "${{ fromJson(steps.version.outputs.content).version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - name: Echo version content
-        run: echo "${{ fromJson(steps.version.outputs.content).version_desc }}"
+          # 同一天如果 dev 又有更新，让当天 Tag 始终指向最新构建的 dev commit。
+          if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
+            git tag -f "${TAG}" "${DEV_SHA}"
+            git push origin "refs/tags/${TAG}" --force
+          else
+            git tag "${TAG}" "${DEV_SHA}"
+            git push origin "refs/tags/${TAG}"
+          fi
 
-      # 完成
-      - run: echo "🍏 This job's status is ${{ job.status }}."
+          if gh release view "${TAG}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            gh release edit "${TAG}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --title "${TITLE}" \
+              --notes-file release-notes.md \
+              --prerelease \
+              --target "${DEV_SHA}"
+          else
+            gh release create "${TAG}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --title "${TITLE}" \
+              --notes-file release-notes.md \
+              --prerelease \
+              --target "${DEV_SHA}"
+          fi
+
+          gh release upload "${TAG}" \
+            "simple_live_tv_app/build/app/outputs/flutter-apk/SimpleLiveTV-v7a-${BUILD_DATE}.apk" \
+            "simple_live_tv_app/build/app/outputs/flutter-apk/SimpleLiveTV-arm64-${BUILD_DATE}.apk" \
+            "simple_live_tv_app/build/app/outputs/flutter-apk/SimpleLiveTV-x86_64-${BUILD_DATE}.apk" \
+            --clobber \
+            --repo "${GITHUB_REPOSITORY}"
+
+      - name: Summary
+        run: |
+          echo "Release: ${{ steps.meta.outputs.title }}"
+          echo "Tag: ${{ steps.meta.outputs.tag }}"
+          echo "🍏 This job's status is ${{ job.status }}."
