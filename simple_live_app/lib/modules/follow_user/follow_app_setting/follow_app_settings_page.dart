@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:get/get.dart';
 import 'package:remixicon/remixicon.dart';
 import 'package:simple_live_app/app/app_style.dart';
@@ -127,10 +127,9 @@ class FollowSettingsPage extends GetView<FollowAppSettingsController> {
                         max: 42,
                         step: 1,
                         unit: "天",
-                        displayValue:
-                            controller.appC.dormancyThreshold.value == 0
-                                ? "关闭"
-                                : "${controller.appC.dormancyThreshold.value}天",
+                        displayValue: controller.appC.dormancyThreshold.value == 0
+                            ? "关闭"
+                            : "${controller.appC.dormancyThreshold.value}天",
                         onChanged: (e) {
                           controller.appC.setDormancyThreshold(e);
                         },

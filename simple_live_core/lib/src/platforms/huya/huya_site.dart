@@ -4,43 +4,32 @@ import 'dart:math';
 import 'package:crypto/crypto.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 import 'package:simple_live_core/src/common/http_client.dart';
-import 'package:simple_live_core/src/model/tars/get_cdn_token_ex_req.dart';
-import 'package:simple_live_core/src/model/tars/get_cdn_token_ex_resp.dart';
-import 'package:simple_live_core/src/model/tars/types.dart';
+import 'package:simple_live_core/src/platforms/huya/huya_request_params.dart';
 import 'package:simple_live_core/src/platforms/huya/huya_utils.dart';
+import 'package:simple_live_core/src/platforms/huya/tars/get_cdn_token_ex_req.dart';
+import 'package:simple_live_core/src/platforms/huya/tars/get_cdn_token_ex_resp.dart';
+import 'package:simple_live_core/src/platforms/huya/tars/types.dart';
 import 'package:tars_dart/tars/net/base_tars_http.dart';
 
 
 class HuyaSite implements LiveSite {
-  static const String baseUrl = "https://www.huya.com";
-  static const String wupUrl = "http://wup.huya.com";
-  static const String kUserAgent =
-      "Mozilla/5.0 (Linux; Android 11; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.91 Mobile Safari/537.36 Edg/117.0.0.0";
+  static const String baseUrl = HuyaRequestParams.baseUrl;
+  static const String wupUrl = HuyaRequestParams.wupUrl;
+  static const String kUserAgent = HuyaRequestParams.kUserAgent;
 
   // regex
   /// 匹配房间数据
-  static const String ROOM_DATA_REGEX =
-      r'var\s+TT_ROOM_DATA\s*=\s*(\{[\s\S]*?\})';
+  static const String ROOM_DATA_REGEX = HuyaRequestParams.ROOM_DATA_REGEX;
 
   /// 匹配流数据
-  static const String STREAM_REGEX = r"stream:\s*(\{[\s\S]*?\n\s*\})";
+  static const String STREAM_REGEX = HuyaRequestParams.STREAM_REGEX;
 
   /// 匹配 YY ID
-  static const String AYYUID_REGEX = r'"yyid":"?(\d+)"?';
+  static const String AYYUID_REGEX = HuyaRequestParams.AYYUID_REGEX;
 
-  static String HYSDK_UA =
-      "HYSDK(Windows,30000002)_APP(pc_exe&7090000&official)_SDK(trans&2.35.0.5996)";
+  static String HYSDK_UA = HuyaRequestParams.HYSDK_UA;
 
-  static Map<String, String> get requestHeaders {
-    return {
-      'Origin': baseUrl,
-      'Referer': baseUrl,
-      'User-Agent': HYSDK_UA,
-    };
-  }
-
-  final BaseTarsHttp tupClient =
-      BaseTarsHttp("http://wup.huya.com", "liveui", headers: requestHeaders);
+  final BaseTarsHttp tupClient = BaseTarsHttp("http://wup.huya.com", "liveui", headers: HuyaRequestParams.requestHeaders);
 
 
   @override
@@ -238,7 +227,7 @@ class HuyaSite implements LiveSite {
     var resultText = await HttpClient.instance.getText(
       "$baseUrl/$roomId",
       queryParameters: {},
-      header: requestHeaders,
+      header: HuyaRequestParams.requestHeaders,
     );
     // get_live_status
     var roomData = RegExp(ROOM_DATA_REGEX, multiLine: false)
@@ -510,7 +499,7 @@ class HuyaSite implements LiveSite {
     var resultText = await HttpClient.instance.getText(
       "$baseUrl/$roomId",
       queryParameters: {},
-      header: requestHeaders,
+      header: HuyaRequestParams.requestHeaders,
     );
     var jsonString = RegExp(ROOM_DATA_REGEX, multiLine: false)
         .firstMatch(resultText)
@@ -576,9 +565,22 @@ class HuyaSite implements LiveSite {
 
   @override
   Future<List<LiveSuperChatMessage>> getSuperChatMessage(
-      {required String roomId}) {
-    //尚不支持
-    return Future.value([]);
+      {required String roomId}) async {
+    List<LiveSuperChatMessage> ls = [];
+    // 兼容tv接口 二次请求detail
+    LiveRoomDetail detail = await getRoomDetail(roomId: roomId);
+    HuyaDanmakuArgs args = detail.danmakuData as HuyaDanmakuArgs;
+    if(args.topSid !=0){
+      ls = await getHuyaSuperChatMessageList(lPid: args.topSid, first: true);
+    }
+    return ls;
+  }
+
+  @override
+  void setSiteAttrs(Map<String, dynamic> data) {
+    if (data.containsKey('ua')) {
+      HYSDK_UA = data['ua'] as String;
+    }
   }
 }
 

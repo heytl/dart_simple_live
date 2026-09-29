@@ -134,3 +134,34 @@ class GetLivingInfoReq extends TarsStruct {
     _ds.DisplayInt(iIpStack, "iIpStack");
   }
 }
+
+class MessageUser extends TarsStruct {
+  String sNick = "";
+  String sAvatar = "";
+
+  @override
+  void readFrom(TarsInputStream _is) {
+    sNick = _is.read(sNick, 1, false);
+    sAvatar = _is.read(sAvatar, 2, false);
+  }
+
+  @override
+  void writeTo(TarsOutputStream _os) {
+    _os.write(sNick, 1);
+    _os.write(sAvatar, 2);
+  }
+
+  @override
+  Object deepCopy() {
+    return MessageUser()
+      ..sNick = sNick
+      ..sAvatar = sAvatar;
+  }
+
+  @override
+  void displayAsString(StringBuffer sb, int level) {
+    final ds = TarsDisplayer(sb, level: level);
+    ds.DisplayString(sNick, "sNick");
+    ds.DisplayString(sAvatar, "sAvatar");
+  }
+}

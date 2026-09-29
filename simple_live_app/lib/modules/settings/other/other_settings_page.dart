@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:get/get.dart';
 import 'package:remixicon/remixicon.dart';
 import 'package:simple_live_app/app/app_style.dart';
@@ -70,8 +70,7 @@ class OtherSettingsPage extends GetView<OtherSettingsController> {
                   WidgetSpan(
                     child: GestureDetector(
                       onTap: () {
-                        launchUrlString(
-                            "https://mpv.io/manual/stable/#video-output-drivers");
+                        launchUrlString("https://mpv.io/manual/stable/#video-output-drivers");
                       },
                       child: const Text(
                         "MPV的文档",
@@ -93,8 +92,7 @@ class OtherSettingsPage extends GetView<OtherSettingsController> {
               children: [
                 Obx(
                   () => SettingsSwitch(
-                    value:
-                        AppSettingsController.instance.customPlayerOutput.value,
+                    value: AppSettingsController.instance.customPlayerOutput.value,
                     title: "自定义输出驱动与硬件加速",
                     onChanged: (e) {
                       AppSettingsController.instance.setCustomPlayerOutput(e);
@@ -105,8 +103,7 @@ class OtherSettingsPage extends GetView<OtherSettingsController> {
                 Obx(
                   () => SettingsMenu(
                     title: "视频输出驱动(--vo)",
-                    value:
-                        AppSettingsController.instance.videoOutputDriver.value,
+                    value: AppSettingsController.instance.videoOutputDriver.value,
                     valueMap: controller.videoOutputDrivers,
                     onChanged: (e) {
                       AppSettingsController.instance.setVideoOutputDriver(e);
@@ -117,8 +114,7 @@ class OtherSettingsPage extends GetView<OtherSettingsController> {
                 Obx(
                   () => SettingsMenu(
                     title: "音频输出驱动(--ao)",
-                    value:
-                        AppSettingsController.instance.audioOutputDriver.value,
+                    value: AppSettingsController.instance.audioOutputDriver.value,
                     valueMap: controller.audioOutputDrivers,
                     onChanged: (e) {
                       AppSettingsController.instance.setAudioOutputDriver(e);
@@ -129,8 +125,7 @@ class OtherSettingsPage extends GetView<OtherSettingsController> {
                 Obx(
                   () => SettingsMenu(
                     title: "硬件解码器(--hwdec)",
-                    value: AppSettingsController
-                        .instance.videoHardwareDecoder.value,
+                    value: AppSettingsController.instance.videoHardwareDecoder.value,
                     valueMap: controller.hardwareDecoder,
                     onChanged: (e) {
                       AppSettingsController.instance.setVideoHardwareDecoder(e);
@@ -139,8 +134,7 @@ class OtherSettingsPage extends GetView<OtherSettingsController> {
                 ),
                 Obx(
                   () => SettingsSwitch(
-                    value: AppSettingsController
-                        .instance.videoDoubleBuffering.value,
+                    value: AppSettingsController.instance.videoDoubleBuffering.value,
                     title: "自定义开启双重缓存",
                     onChanged: (e) {
                       AppSettingsController.instance.setVideoDoubleBuffering(e);
@@ -166,8 +160,7 @@ class OtherSettingsPage extends GetView<OtherSettingsController> {
                             confirm: "确认开启",
                           );
                           if (confirm) {
-                            AppSettingsController.instance
-                                .setEnableRtxVsr(true);
+                            AppSettingsController.instance.setEnableRtxVsr(true);
                           }
                         } else {
                           AppSettingsController.instance.setEnableRtxVsr(false);
@@ -176,6 +169,33 @@ class OtherSettingsPage extends GetView<OtherSettingsController> {
                     ),
                   ),
               ],
+            ),
+          ),
+          Visibility(
+            visible: Platform.isWindows || Platform.isLinux || Platform.isMacOS,
+            child: Padding(
+              padding: AppStyle.edgeInsetsA12.copyWith(top: 24),
+              child: Text(
+                "窗口管理",
+                style: Get.textTheme.titleSmall,
+              ),
+            ),
+          ),
+          Visibility(
+            visible: Platform.isWindows || Platform.isLinux || Platform.isMacOS,
+            child: SettingsCard(
+              child: Column(
+                children: [
+                  Obx(
+                    () => SettingsSwitch(
+                      value: AppSettingsController.instance.windowMaxAuto.value,
+                      title: "记忆窗口最大化",
+                      subtitle: "测试性功能,副屏可能存在未知问题",
+                      onChanged: controller.setWindowMaxAuto,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           Padding(

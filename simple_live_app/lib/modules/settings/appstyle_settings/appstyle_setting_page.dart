@@ -1,9 +1,6 @@
-import 'dart:io';
-
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:get/get.dart';
 import 'package:simple_live_app/app/app_style.dart';
-import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/app/constant.dart';
 import 'package:simple_live_app/modules/settings/appstyle_settings/appstyle_setting_contorller.dart';
 import 'package:simple_live_app/widgets/settings/settings_card.dart';
@@ -27,14 +24,13 @@ class AppStyleSettingPage extends GetView<AppStyleSettingController> {
         AppStyle.hGap4,
         Visibility(
           visible: controller.fontState.value == DownloadState.downloaded,
-          child:
-        Tooltip(
-          message: "删除字体",
-          child: IconButton(
-            onPressed: controller.fontDelete,
-            icon: Icon(Icons.delete_outline_outlined),
+          child: Tooltip(
+            message: "删除字体",
+            child: IconButton(
+              onPressed: controller.fontDelete,
+              icon: Icon(Icons.delete_outline_outlined),
+            ),
           ),
-        ),
         ),
         Visibility(
           visible: controller.fontState.value == DownloadState.downloaded,
@@ -100,35 +96,6 @@ class AppStyleSettingPage extends GetView<AppStyleSettingController> {
               ),
             ),
           ),
-          if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) ...[
-            AppStyle.vGap12,
-            Padding(
-              padding: AppStyle.edgeInsetsA12,
-              child: Text(
-                "窗口",
-                style: Get.textTheme.titleSmall,
-              ),
-            ),
-            SettingsCard(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Obx(
-                    () => SettingsSwitch(
-                      title: "记忆窗口最大化状态",
-                      subtitle: "关闭后仅显示记忆窗口大小",
-                      value: AppSettingsController
-                          .instance.windowStartMaximized.value,
-                      onChanged: (e) {
-                        AppSettingsController.instance
-                            .setWindowStartMaximized(e);
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
           AppStyle.vGap12,
           Padding(
             padding: AppStyle.edgeInsetsA12,
@@ -188,10 +155,7 @@ class AppStyleSettingPage extends GetView<AppStyleSettingController> {
                                     () => Center(
                                       child: Icon(
                                         Icons.check,
-                                        color:
-                                            controller.styleColor.value == e.v
-                                                ? Colors.white
-                                                : Colors.transparent,
+                                        color: controller.styleColor.value == e.v ? Colors.white : Colors.transparent,
                                       ),
                                     ),
                                   ),
@@ -269,9 +233,5 @@ extension ColorExt on Color {
     return (x * 255.0).round() & 0xff;
   }
 
-  int get v =>
-      _floatToInt8(a) << 24 |
-      _floatToInt8(r) << 16 |
-      _floatToInt8(g) << 8 |
-      _floatToInt8(b) << 0;
+  int get v => _floatToInt8(a) << 24 | _floatToInt8(r) << 16 | _floatToInt8(g) << 8 | _floatToInt8(b) << 0;
 }
