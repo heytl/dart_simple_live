@@ -1,5 +1,6 @@
 import 'dart:convert';
-import '../common/common_asT.dart';
+
+import '../../../common/common_asT.dart';
 
 class DouyinUserInfoModel {
   DouyinUserInfoModel({
@@ -9,6 +10,7 @@ class DouyinUserInfoModel {
     this.sign,
     this.birthday,
     this.gender,
+    this.avatar,
   });
 
   factory DouyinUserInfoModel.fromJson(Map<String, dynamic> json) => DouyinUserInfoModel(
@@ -18,6 +20,7 @@ class DouyinUserInfoModel {
         sign: asT<String?>(json['sign']),
         birthday: asT<String?>(json['birthday']),
         gender: asT<String?>(json['gender']),
+        avatar: asT<String?>(json['avatar_thumb']['url_list'][0]),
       );
 
   String? id;
@@ -26,6 +29,7 @@ class DouyinUserInfoModel {
   String? sign;
   String? birthday;
   String? gender;
+  String? avatar;
 
   @override
   String toString() {
@@ -39,5 +43,6 @@ class DouyinUserInfoModel {
         'sign': sign,
         'birthday': birthday,
         'gender': gender,
+        'avatar': avatar,
       };
 }

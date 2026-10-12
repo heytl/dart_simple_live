@@ -1,5 +1,6 @@
 import 'dart:convert';
-import '../common/common_asT.dart';
+
+import '../../../common/common_asT.dart';
 
 class BiliBiliUserInfoModel {
   BiliBiliUserInfoModel({
@@ -11,7 +12,18 @@ class BiliBiliUserInfoModel {
     this.sex,
     this.nickFree,
     this.rank,
+    this.face,
   });
+
+  int? mid;
+  String? uname;
+  String? userid;
+  String? sign;
+  String? birthday;
+  String? sex;
+  bool? nickFree;
+  String? rank;
+  String? face;
 
   factory BiliBiliUserInfoModel.fromJson(Map<String, dynamic> json) => BiliBiliUserInfoModel(
         mid: asT<int?>(json['mid']),
@@ -22,16 +34,8 @@ class BiliBiliUserInfoModel {
         sex: asT<String?>(json['sex']),
         nickFree: asT<bool?>(json['nick_free']),
         rank: asT<String?>(json['rank']),
+        face: asT<String?>(json['face']),
       );
-
-  int? mid;
-  String? uname;
-  String? userid;
-  String? sign;
-  String? birthday;
-  String? sex;
-  bool? nickFree;
-  String? rank;
 
   @override
   String toString() {
@@ -47,5 +51,6 @@ class BiliBiliUserInfoModel {
         'sex': sex,
         'nick_free': nickFree,
         'rank': rank,
+        'face': face,
       };
 }

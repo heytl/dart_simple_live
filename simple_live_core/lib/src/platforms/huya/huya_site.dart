@@ -4,13 +4,14 @@ import 'dart:math';
 import 'package:crypto/crypto.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 import 'package:simple_live_core/src/common/http_client.dart';
+import 'package:simple_live_core/src/model/account_info.dart';
+import 'package:simple_live_core/src/model/account_qr_code.dart';
 import 'package:simple_live_core/src/platforms/huya/common/huya_request_params.dart';
 import 'package:simple_live_core/src/platforms/huya/huya_utils.dart';
 import 'package:simple_live_core/src/platforms/huya/tars/get_cdn_token_ex_req.dart';
 import 'package:simple_live_core/src/platforms/huya/tars/get_cdn_token_ex_resp.dart';
 import 'package:simple_live_core/src/platforms/huya/tars/types.dart';
 import 'package:tars_dart/tars/net/base_tars_http.dart';
-
 
 class HuyaSite implements LiveSite {
   static const String baseUrl = HuyaRequestParams.baseUrl;
@@ -29,7 +30,8 @@ class HuyaSite implements LiveSite {
 
   static String HYSDK_UA = HuyaRequestParams.HYSDK_UA;
 
-  final BaseTarsHttp tupClient = BaseTarsHttp("http://wup.huya.com", "liveui", headers: HuyaRequestParams.requestHeaders);
+  final BaseTarsHttp tupClient =
+      BaseTarsHttp("http://wup.huya.com", "liveui", headers: HuyaRequestParams.requestHeaders);
 
   // 是否是vip房间 详见：https://diy-assets.msstatic.com/lzlfilefolder/huya-vip-scope.html?halfscreen=1&hidebar=1
   bool _isVipRoom = false; // getRoomDetail update;only 4k needs, temp set
@@ -94,17 +96,10 @@ class HuyaSite implements LiveSite {
   }
 
   @override
-  Future<LiveCategoryResult> getCategoryRooms(LiveSubCategory category,
-      {int page = 1}) async {
+  Future<LiveCategoryResult> getCategoryRooms(LiveSubCategory category, {int page = 1}) async {
     var resultText = await HttpClient.instance.getJson(
       "https://www.huya.com/cache.php",
-      queryParameters: {
-        "m": "LiveList",
-        "do": "getLiveListByPage",
-        "tagAll": 0,
-        "gameId": category.id,
-        "page": page
-      },
+      queryParameters: {"m": "LiveList", "do": "getLiveListByPage", "tagAll": 0, "gameId": category.id, "page": page},
     );
     var result = json.decode(resultText);
     var items = <LiveRoomItem>[];
@@ -132,8 +127,7 @@ class HuyaSite implements LiveSite {
   }
 
   @override
-  Future<List<LivePlayQuality>> getPlayQualities(
-      {required LiveRoomDetail detail}) {
+  Future<List<LivePlayQuality>> getPlayQualities({required LiveRoomDetail detail}) {
     List<LivePlayQuality> qualities = <LivePlayQuality>[];
     var urlData = detail.data as HuyaUrlDataModel;
     if (urlData.bitRates.isEmpty) {
@@ -148,7 +142,7 @@ class HuyaSite implements LiveSite {
 
     for (var item in urlData.bitRates) {
       // huya 4K needs vip
-      if(item.name == '4K'){
+      if (item.name == '4K') {
         continue;
       }
       qualities.add(LivePlayQuality(
@@ -164,9 +158,7 @@ class HuyaSite implements LiveSite {
   }
 
   @override
-  Future<LivePlayUrl> getPlayUrls(
-      {required LiveRoomDetail detail,
-      required LivePlayQuality quality}) async {
+  Future<LivePlayUrl> getPlayUrls({required LiveRoomDetail detail, required LivePlayQuality quality}) async {
     var ls = <String>[];
     for (var element in quality.data["urls"]) {
       var line = element as HuyaLineModel;
@@ -199,12 +191,7 @@ class HuyaSite implements LiveSite {
   Future<LiveCategoryResult> getRecommendRooms({int page = 1}) async {
     var resultText = await HttpClient.instance.getJson(
       "https://www.huya.com/cache.php",
-      queryParameters: {
-        "m": "LiveList",
-        "do": "getLiveListByPage",
-        "tagAll": 0,
-        "page": page
-      },
+      queryParameters: {"m": "LiveList", "do": "getLiveListByPage", "tagAll": 0, "page": page},
     );
     var result = json.decode(resultText);
     var items = <LiveRoomItem>[];
@@ -246,12 +233,8 @@ class HuyaSite implements LiveSite {
         .firstMatch(resultText)
         ?.group(0)
         ?.replaceAll("var TT_ROOM_DATA = ", "");
-    var streamData = RegExp(STREAM_REGEX)
-            .firstMatch(resultText)
-            ?.group(0)
-            ?.replaceAll("stream: ", "")
-            .split('\n')[0] ??
-        '""';
+    var streamData =
+        RegExp(STREAM_REGEX).firstMatch(resultText)?.group(0)?.replaceAll("stream: ", "").split('\n')[0] ?? '""';
     if (roomData != null) {
       try {
         Map<String, dynamic> roomDataJson = json.decode(roomData);
@@ -265,8 +248,7 @@ class HuyaSite implements LiveSite {
           userName: streamDataGameLiveInfo["nick"],
           userAvatar: streamDataGameLiveInfo["avatar180"],
           online: streamDataGameLiveInfo["totalCount"],
-          status: roomDataJson["state"] == "ON" &&
-              roomDataJson["isReplay"] == false,
+          status: roomDataJson["state"] == "ON" && roomDataJson["isReplay"] == false,
           url: "https://www.huya.com/$roomId",
           introduction: streamDataGameLiveInfo["introduction"],
           notice: streamDataGameLiveInfo["introduction"],
@@ -274,14 +256,11 @@ class HuyaSite implements LiveSite {
         );
         // live -> add HuyaUrlDataModel and danmaku
         if (result.status) {
-          var streamDataGameStreamInfo =
-              streamDataJson["gameStreamInfoList"][0];
+          var streamDataGameStreamInfo = streamDataJson["gameStreamInfoList"][0];
           // danmaku
           // maybe int or string don't know why
-          var topSid =
-              int.tryParse(streamDataGameStreamInfo["lChannelId"].toString());
-          var subSid = int.tryParse(
-              streamDataGameStreamInfo["lSubChannelId"].toString());
+          var topSid = int.tryParse(streamDataGameStreamInfo["lChannelId"].toString());
+          var subSid = int.tryParse(streamDataGameStreamInfo["lSubChannelId"].toString());
           var uid = int.tryParse(streamDataGameLiveInfo["uid"].toString());
           result = result.updateDanmakuData(
             HuyaDanmakuArgs(
@@ -374,29 +353,23 @@ class HuyaSite implements LiveSite {
     bool isWap = platformId == 103;
     var clacStartTime = DateTime.now().millisecondsSinceEpoch;
 
-    CoreLog.i(
-        "using $presenterUid | ctype-{$ctype} | platformId - {$platformId} | isWap - {$isWap} | $clacStartTime");
+    CoreLog.i("using $presenterUid | ctype-{$ctype} | platformId - {$platformId} | isWap - {$isWap} | $clacStartTime");
 
     var seqId = presenterUid + clacStartTime;
-    final secretHash =
-        md5.convert(utf8.encode('$seqId|$ctype|$platformId')).toString();
+    final secretHash = md5.convert(utf8.encode('$seqId|$ctype|$platformId')).toString();
 
     final convertUid = rotl64(presenterUid);
     final calcUid = isWap ? presenterUid : convertUid;
     final fm = Uri.decodeComponent(mapAnti['fm']!.first);
     final secretPrefix = utf8.decode(base64.decode(fm)).split('_').first;
     var wsTime = mapAnti['wsTime']!.first;
-    final secretStr =
-        '${secretPrefix}_${calcUid}_${stream}_${secretHash}_$wsTime';
+    final secretStr = '${secretPrefix}_${calcUid}_${stream}_${secretHash}_$wsTime';
 
     final wsSecret = md5.convert(utf8.encode(secretStr)).toString();
 
     final rnd = Random();
-    final ct =
-        ((int.parse(wsTime, radix: 16) + rnd.nextDouble()) * 1000).toInt();
-    final uuid = (((ct % 1e10) + rnd.nextDouble()) * 1e3 % 0xffffffff)
-        .toInt()
-        .toString();
+    final ct = ((int.parse(wsTime, radix: 16) + rnd.nextDouble()) * 1000).toInt();
+    final uuid = (((ct % 1e10) + rnd.nextDouble()) * 1e3 % 0xffffffff).toInt().toString();
     final Map<String, dynamic> antiCodeRes = {
       'wsSecret': wsSecret,
       'wsTime': wsTime,
@@ -432,8 +405,7 @@ class HuyaSite implements LiveSite {
   }
 
   @override
-  Future<LiveSearchRoomResult> searchRooms(String keyword,
-      {int page = 1}) async {
+  Future<LiveSearchRoomResult> searchRooms(String keyword, {int page = 1}) async {
     var resultText = await HttpClient.instance.getJson(
       "https://search.cdn.huya.com/",
       queryParameters: {
@@ -475,8 +447,7 @@ class HuyaSite implements LiveSite {
   }
 
   @override
-  Future<LiveSearchAnchorResult> searchAnchors(String keyword,
-      {int page = 1}) async {
+  Future<LiveSearchAnchorResult> searchAnchors(String keyword, {int page = 1}) async {
     var resultText = await HttpClient.instance.getJson(
       "https://search.cdn.huya.com/",
       queryParameters: {
@@ -528,18 +499,12 @@ class HuyaSite implements LiveSite {
     }
     return false;
   }
-  
+
   /// 匿名登录获取uid
   Future<String> getAnonymousUid() async {
     var result = await HttpClient.instance.postJson(
       "https://udblgn.huya.com/web/anonymousLogin",
-      data: {
-        "appId": 5002,
-        "byPass": 3,
-        "context": "",
-        "version": "2.4",
-        "data": {}
-      },
+      data: {"appId": 5002, "byPass": 3, "context": "", "version": "2.4", "data": {}},
       header: {
         "user-agent": kUserAgent,
       },
@@ -555,8 +520,7 @@ class HuyaSite implements LiveSite {
   }
 
   String getUid({int? t, int? e}) {
-    var n = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-        .split("");
+    var n = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz".split("");
     var o = List.filled(36, '');
     if (t != null) {
       for (var i = 0; i < t; i++) {
@@ -576,23 +540,41 @@ class HuyaSite implements LiveSite {
   }
 
   @override
-  Future<List<LiveSuperChatMessage>> getSuperChatMessage(
-      {required String roomId}) async {
+  Future<List<LiveSuperChatMessage>> getSuperChatMessage({required String roomId}) async {
     List<LiveSuperChatMessage> ls = [];
     // 兼容tv接口 二次请求detail
     LiveRoomDetail detail = await getRoomDetail(roomId: roomId);
     HuyaDanmakuArgs args = detail.danmakuData as HuyaDanmakuArgs;
-    if(args.topSid !=0){
+    if (args.topSid != 0) {
       ls = await getHuyaSuperChatMessageList(lPid: args.topSid, first: true);
     }
     return ls;
   }
 
   @override
-  void setSiteAttrs(Map<String, dynamic> data) {
-    if (data.containsKey('ua')) {
-      HYSDK_UA = data['ua'] as String;
+  void setSiteAttrs(String data) {
+    final map = jsonDecode(data) as Map<String, dynamic>;
+    if (map.containsKey('ua')) {
+      HYSDK_UA = map['ua'] as String;
     }
+  }
+
+  @override
+  Future<AccountInfo> getAccountInfo({required String credential}) {
+    // TODO: implement getAccountInfo
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<QRCode> getQRCode() {
+    // TODO: implement getQRCode
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<QRPollResult> getQRPollResult({required String qrcodeKey}) {
+    // TODO: implement getQRPollResult
+    throw UnimplementedError();
   }
 }
 
